@@ -14,16 +14,21 @@ const CFG = {
 
 /* ═══ SCHEMA ═══ */
 const SCHEMA = {
+  home: {
+    label: 'Beranda',
+    sub: 'Ringkasan brankas dokumen digital'
+  },
   identitas: {
     label   : 'Identitas & Kependudukan',
     sub     : 'Data identitas resmi diri kamu',
     docs: [
       { id:'ktp',     label:'Kartu Tanda Penduduk (KTP)',                   type:'both', icon:'id-card',     hint:'Nomor NIK & upload scan/foto KTP' },
-      { id:'kk',      label:'Kartu Keluarga (KK)',                          type:'file', icon:'users',        hint:'Scan atau foto Kartu Keluarga' },
-      { id:'npwp',    label:'Nomor Pokok Wajib Pajak (NPWP)',               type:'both', icon:'landmark',     hint:'Nomor NPWP & upload dokumen' },
+      { id:'akta',    label:'Akta Kelahiran',                               type:'file', icon:'scroll',      hint:'Scan atau foto Akta Kelahiran' },
+      { id:'kk',      label:'Kartu Keluarga (KK)',                          type:'file', icon:'users',       hint:'Scan atau foto Kartu Keluarga' },
+      { id:'npwp',    label:'Nomor Pokok Wajib Pajak (NPWP)',               type:'both', icon:'landmark',    hint:'Nomor NPWP & upload dokumen' },
       { id:'bpjs_kes',label:'Kartu Badan Penyelenggara Jaminan Sosial Kesehatan (BPJS Kesehatan)', type:'both', icon:'heart-pulse', hint:'Nomor peserta & upload kartu' },
-      { id:'asal',    label:'Alamat Rumah Asal',                            type:'text', icon:'home',         hint:'Jl. Merdeka No.1, RT/RW 01/01, Kec...' },
-      { id:'domisili',label:'Alamat Domisili / Kos',                        type:'text', icon:'map-pin',      hint:'Jl. Kost Nyaman No.12, Kec...' },
+      { id:'asal',    label:'Alamat Rumah Asal',                            type:'text', icon:'home',        hint:'Jl. Merdeka No.1, RT/RW 01/01, Kec...' },
+      { id:'domisili',label:'Alamat Domisili / Kos',                        type:'text', icon:'map-pin',     hint:'Jl. Kost Nyaman No.12, Kec...' },
     ]
   },
   mobilitas: {
@@ -79,7 +84,7 @@ const SCHEMA = {
 
 /* ═══ STATE ═══ */
 const S = {
-  pin   : null, loggedIn: false, sec: 'identitas',
+  pin   : null, loggedIn: false, sec: 'home',
   vault : {},
   docId : null, docType: null,
   pfiles: [], cvTags: [],
@@ -305,7 +310,7 @@ const App = {
     $('screen-pin').style.display='none';
     $('app').style.display='flex';
     S.loggedIn=true;
-    App.nav('identitas', document.querySelector('.nav-item[data-sec="identitas"]'));
+    App.nav('home', document.querySelector('.nav-item[data-sec="home"]'));
     setTimeout(()=>lucide.createIcons(),80);
   },
 
@@ -340,8 +345,8 @@ const App = {
     const schema=SCHEMA[secId]; if(!schema) return;
     const container=$(`sec-${secId}`); if(!container) return;
 
-    if(secId==='identitas'){
-      App._renderIdentitas(container, schema);
+    if(secId==='home'){
+      App._renderHome(container);
     } else if(secId==='legalitas'){
       App._renderLegalitas(container, schema);
     } else {
@@ -350,15 +355,27 @@ const App = {
     setTimeout(()=>lucide.createIcons(),40);
   },
 
-  _renderIdentitas(container, schema){
-    // Split: text+both docs vs file-only docs
-    const textDocs = schema.docs.filter(d=>d.type==='text'||d.type==='both');
-    const fileDocs = schema.docs.filter(d=>d.type==='file');
-    container.innerHTML=`
-      <div class="subsection-title">Nomor Identitas &amp; Alamat</div>
-      <div class="doc-grid">${textDocs.map(d=>App._card(d)).join('')}</div>
-      ${fileDocs.length?`<div class="subsection-title">Dokumen Fisik</div><div class="doc-grid">${fileDocs.map(d=>App._card(d)).join('')}</div>`:''}`;
-    setTimeout(()=>lucide.createIcons(),40);
+  _renderHome(container){
+    const total = Object.keys(S.vault).length;
+    const uName = localStorage.getItem('sv_uname') || 'Ghibran Esa Anugrah'; 
+    
+    container.innerHTML = `
+      <div style="background:var(--accent); color:#fff; padding:24px; border-radius:var(--radius-lg); margin-bottom:24px; box-shadow:var(--shadow-sm);">
+        <div style="font-size:1.4rem; font-weight:600; margin-bottom:6px;">Halo, ${esc(uName)}! 👋</div>
+        <div style="font-size:0.85rem; opacity:0.9;">Selamat datang. Brankas lu dalam keadaan aman. Terdapat <strong>${total}</strong> entri data yang tersimpan terenkripsi secara offline.</div>
+      </div>
+      <div class="subsection-title">Akses Cepat</div>
+      <div class="doc-grid">
+        <div class="doc-card" style="cursor:pointer;" onclick="App.nav('identitas', document.querySelector('[data-sec=identitas]'))">
+          <div class="card-icon-wrap filled"><i data-lucide="id-card" style="width:16px;height:16px;"></i></div>
+          <div class="card-label" style="margin-top:12px;">Identitas & Kependudukan</div>
+        </div>
+        <div class="doc-card" style="cursor:pointer;" onclick="App.nav('legalitas', document.querySelector('[data-sec=legalitas]'))">
+          <div class="card-icon-wrap filled"><i data-lucide="briefcase" style="width:16px;height:16px;"></i></div>
+          <div class="card-label" style="margin-top:12px;">Legalitas & Karir</div>
+        </div>
+      </div>
+    `;
   },
 
   _renderLegalitas(container, schema){
@@ -723,6 +740,9 @@ const App = {
         try{
           const u=await(await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
           $('drive-user').textContent=`Terhubung: ${u.email||u.name}`;
+          
+          localStorage.setItem('sv_uname', u.name || u.email);
+          if (S.sec === 'home') App.render('home'); 
         }catch{ $('drive-user').textContent='Terhubung ke Google'; }
         $('btn-gauth').style.display='none';
         $('btn-glgt').style.display='flex';

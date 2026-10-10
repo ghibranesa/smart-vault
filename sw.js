@@ -1,5 +1,5 @@
 /* SmartVault Service Worker — offline-first PWA */
-const CACHE   = 'sv-v3';
+const CACHE   = 'sv-v4';
 const ASSETS  = [
   './',
   './index.html',
@@ -38,7 +38,12 @@ self.addEventListener('fetch', e => {
         const clone = resp.clone();
         caches.open(CACHE).then(c => c.put(e.request, clone));
         return resp;
-      }).catch(() => caches.match('./index.html'));
+      }).catch((err) => {
+        if (err.request && err.request.mode === 'navigate') {
+          return caches.match('./index.html');
+        }
+        return null;
+      });
     })
   );
 });
