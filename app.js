@@ -11,7 +11,7 @@
 ═══════════════════════════════════════════════ */
 const CFG = {
   GOOGLE_CLIENT_ID : '280494613299-vcrnbqvj8ni2pub7gq5q2auodcleb2sf.apps.googleusercontent.com',
-  GOOGLE_SCOPE     : 'https://www.googleapis.com/auth/drive.appdata',
+  GOOGLE_SCOPE     : 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/userinfo.email',
   DB_KEY           : 'sv_vault',
   META_KEY         : 'sv_meta',
   DRIVE_FILE       : 'vault_backup.json',
