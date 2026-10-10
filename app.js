@@ -361,7 +361,7 @@ const App = {
     
     container.innerHTML = `
       <div style="background:var(--accent); color:#fff; padding:24px; border-radius:var(--radius-lg); margin-bottom:24px; box-shadow:var(--shadow-sm);">
-        <div style="font-size:1.4rem; font-weight:600; margin-bottom:6px;">Halo, ${esc(uName)}! 👋</div>
+        <div style="font-size:clamp(1.1rem, 5vw, 1.4rem); font-weight:600; margin-bottom:8px; overflow-wrap:break-word; word-break:break-word; line-height:1.35;">Halo, ${esc(uName)}! 👋</div>
         <div style="font-size:0.85rem; opacity:0.9;">Selamat datang. Brankas lu dalam keadaan aman. Terdapat <strong>${total}</strong> entri data yang tersimpan terenkripsi secara offline.</div>
       </div>
       <div class="subsection-title">Akses Cepat</div>
@@ -488,7 +488,10 @@ const App = {
   /* ── DOC MODAL ── */
   openDoc(docId){
     let def=null;
-    for(const sec of Object.values(SCHEMA)){ def=sec.docs.find(d=>d.id===docId); if(def) break; }
+    for(const sec of Object.values(SCHEMA)){ 
+      if(sec.docs) { def = sec.docs.find(d=>d.id===docId); }
+      if(def) break; 
+    }
     if(!def) return;
 
     S.docId=docId; S.docType=def.type; S.pfiles=[]; S.cvTags=[];
