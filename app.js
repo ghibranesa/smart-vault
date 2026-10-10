@@ -10,7 +10,7 @@
    CONFIG
 ═══════════════════════════════════════════════ */
 const CFG = {
-  GOOGLE_CLIENT_ID : '280494613299-vcrnbqvj8ni2pub7gq5q2auodcleb2sf.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID : 'G280494613299-vcrnbqvj8ni2pub7gq5q2auodcleb2sf.apps.googleusercontent.com',
   GOOGLE_SCOPE     : 'https://www.googleapis.com/auth/drive.appdata',
   DB_KEY           : 'sv_vault',
   META_KEY         : 'sv_meta',
@@ -185,15 +185,7 @@ function hideModal(id) {
    INIT
 ═══════════════════════════════════════════════ */
 async function init() {
-  // Safety check: are CDNs loaded?
-  if (typeof lucide === 'undefined') {
-    document.body.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:12px;font-family:sans-serif;color:#94a3b8;background:#0f172a;">
-      <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      <div style="font-size:0.9rem;">Gagal load CDN. Coba refresh atau cek koneksi internet lu.</div>
-    </div>`;
-    return;
-  }
-
+  // Semua lib sudah dijamin ready oleh waitForLibs() sebelum init() dipanggil
   lucide.createIcons();
 
   // Show main layout (sidebar etc) but hidden under auth overlay
@@ -993,10 +985,36 @@ function dateStr() {
 }
 
 /* ═══════════════════════════════════════════════
-   BOOT — tunggu DOM ready
+   BOOT — poll sampai semua lib ready, baru init
 ═══════════════════════════════════════════════ */
+function waitForLibs(cb, attempt) {
+  attempt = attempt || 0;
+  var ready = (typeof lucide !== 'undefined') &&
+              (typeof localforage !== 'undefined') &&
+              (typeof CryptoJS !== 'undefined');
+  if (ready) {
+    cb();
+  } else if (attempt > 80) {
+    // Benar-benar gagal setelah ~8 detik
+    document.body.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;height:100vh;' +
+      'flex-direction:column;gap:12px;font-family:sans-serif;color:#94a3b8;background:#0f172a;">' +
+      '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' +
+      '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>' +
+      '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
+      '<div style="font-size:0.88rem;text-align:center;max-width:300px;">' +
+      'Gagal load library (Lucide / CryptoJS / localForage).<br>Coba refresh. ' +
+      'Kalau tetap gagal, cek koneksi internet lu.</div>' +
+      '<button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;' +
+      'background:#059669;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:0.85rem;">' +
+      'Refresh Sekarang</button></div>';
+  } else {
+    setTimeout(function() { waitForLibs(cb, attempt + 1); }, 100);
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('DOMContentLoaded', function() { waitForLibs(init); });
 } else {
-  init();
+  waitForLibs(init);
 }
