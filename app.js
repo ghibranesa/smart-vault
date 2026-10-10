@@ -359,21 +359,46 @@ const App = {
     const total = Object.keys(S.vault).length;
     const uName = localStorage.getItem('sv_uname') || 'Ghibran Esa Anugrah'; 
     
+    // Algoritma dinamis untuk mencari kategori apa saja yang sudah diisi
+    let filledSecs = new Set();
+    for (const docId of Object.keys(S.vault)) {
+      for (const [secKey, secDef] of Object.entries(SCHEMA)) {
+        if (secDef.docs && secDef.docs.find(d => d.id === docId)) {
+          filledSecs.add(secKey); break;
+        }
+      }
+    }
+    
+    // Pemetaan icon statis untuk setiap kategori
+    const icons = { identitas:'id-card', mobilitas:'car', legalitas:'briefcase', pendidikan:'graduation-cap', sertifikasi:'award', pasfoto:'image' };
+    
+    let htmlAkses = '';
+    if(filledSecs.size > 0){
+      // Ambil maksimal 3 kategori yang sudah diisi
+      const activeSecs = Array.from(filledSecs).slice(0, 3);
+      htmlAkses = activeSecs.map(secKey => {
+        const def = SCHEMA[secKey];
+        return `<div class="doc-card" style="cursor:pointer;" onclick="App.nav('${secKey}', document.querySelector('[data-sec=${secKey}]'))">
+          <div class="card-icon-wrap filled"><i data-lucide="${icons[secKey]||'folder'}" style="width:16px;height:16px;"></i></div>
+          <div class="card-label" style="margin-top:12px;">${esc(def.label)}</div>
+        </div>`;
+      }).join('');
+    } else {
+      // Tampilan default jika vault masih kosong sama sekali
+      htmlAkses = `<div class="doc-card" style="cursor:pointer;" onclick="App.nav('identitas', document.querySelector('[data-sec=identitas]'))">
+        <div class="card-icon-wrap filled"><i data-lucide="id-card" style="width:16px;height:16px;"></i></div>
+        <div class="card-label" style="margin-top:12px;">Identitas & Kependudukan</div>
+      </div>`;
+    }
+
     container.innerHTML = `
       <div style="background:var(--accent); color:#fff; padding:24px; border-radius:var(--radius-lg); margin-bottom:24px; box-shadow:var(--shadow-sm);">
         <div style="font-size:clamp(1.1rem, 5vw, 1.4rem); font-weight:600; margin-bottom:8px; overflow-wrap:break-word; word-break:break-word; line-height:1.35;">Halo, ${esc(uName)}! 👋</div>
         <div style="font-size:0.85rem; opacity:0.9;">Selamat datang. Brankas lu dalam keadaan aman. Terdapat <strong>${total}</strong> entri data yang tersimpan terenkripsi secara offline.</div>
       </div>
-      <div class="subsection-title">Akses Cepat</div>
+      <div class="subsection-title">Kategori Terisi (Akses Cepat)</div>
       <div class="doc-grid">
-        <div class="doc-card" style="cursor:pointer;" onclick="App.nav('identitas', document.querySelector('[data-sec=identitas]'))">
-          <div class="card-icon-wrap filled"><i data-lucide="id-card" style="width:16px;height:16px;"></i></div>
-          <div class="card-label" style="margin-top:12px;">Identitas & Kependudukan</div>
-        </div>
-        <div class="doc-card" style="cursor:pointer;" onclick="App.nav('legalitas', document.querySelector('[data-sec=legalitas]'))">
-          <div class="card-icon-wrap filled"><i data-lucide="briefcase" style="width:16px;height:16px;"></i></div>
-          <div class="card-label" style="margin-top:12px;">Legalitas & Karir</div>
-        </div>
+        ${htmlAkses}
       </div>
     `;
   },
