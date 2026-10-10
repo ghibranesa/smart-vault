@@ -4,10 +4,10 @@ const ASSETS  = [
   './',
   './index.html',
   './app.js',
+  './vendor/lucide.min.js',
+  './vendor/localforage.min.js',
+  './vendor/crypto-js.min.js',
   'https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap',
-  'https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js',
-  'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js',
 ];
 
 self.addEventListener('install', e => {
