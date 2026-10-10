@@ -2,554 +2,1014 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartVault — Brankas Dokumen Lu</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="SmartVault" />
+  <meta name="theme-color" content="#faf8f5" />
+  <meta name="description" content="Brankas dokumen digital terenkripsi, offline-first" />
+  <link rel="manifest" href="manifest.json" />
+  <title>SmartVault</title>
 
   <!-- DM Sans -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
 
-  <!-- Lucide Icons (unpkg — serve langsung dari npm, path dijamin valid) -->
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
-
-  <!-- localForage -->
-  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js" crossorigin="anonymous"></script>
-
-  <!-- CryptoJS -->
-  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js" crossorigin="anonymous"></script>
-
-  <!-- Google Identity Services (async ok, dicek saat dipakai) -->
+  <!-- Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
   <script src="https://accounts.google.com/gsi/client" async></script>
 
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script>
-    if (window.tailwind && window.tailwind.config) {
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: { sans: ['DM Sans', 'sans-serif'] },
-          },
-        },
-      };
-    }
-  </script>
-
   <style>
-    *, *::before, *::after { box-sizing: border-box; }
-
-    html, body {
-      margin: 0; padding: 0;
-      background: #0f172a;
-      color: #f8fafc;
-      font-family: 'DM Sans', sans-serif;
-      height: 100%;
+    /* ─── RESET ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { height: 100%; -webkit-text-size-adjust: 100%; }
+    body {
+      min-height: 100%; height: 100%;
+      font-family: 'DM Sans', -apple-system, sans-serif;
+      background: #faf8f5;
+      color: #1a1a1a;
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
     }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: #1e293b; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-
-    /* Layout */
-    #app { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
-    #main-layout { display: flex; flex: 1; overflow: hidden; }
-
-    /* Overlay */
-    .overlay {
-      position: fixed; inset: 0;
-      background: rgba(2,6,23,0.88);
-      z-index: 50;
-      display: flex; align-items: center; justify-content: center;
-      padding: 1rem;
+    /* ─── TOKENS ─── */
+    :root {
+      --bg:          #faf8f5;
+      --bg-2:        #f2ede8;
+      --bg-3:        #e8e0d8;
+      --surface:     #ffffff;
+      --surface-2:   #f7f3ef;
+      --border:      #e4ddd6;
+      --border-2:    #d4ccc4;
+      --text-1:      #1a1a1a;
+      --text-2:      #6b6560;
+      --text-3:      #9e9790;
+      --accent:      #c4704a;
+      --accent-2:    #d4845e;
+      --accent-bg:   #f5ebe4;
+      --accent-dark: #a85a38;
+      --danger:      #c44a4a;
+      --danger-bg:   #fdf0f0;
+      --green:       #4a8c6a;
+      --green-bg:    #edf5f0;
+      --radius-sm:   8px;
+      --radius:      12px;
+      --radius-lg:   18px;
+      --radius-xl:   24px;
+      --shadow-sm:   0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow:      0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      --safe-top:    env(safe-area-inset-top, 0px);
+      --safe-bot:    env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left, 0px);
+      --safe-right:  env(safe-area-inset-right, 0px);
     }
 
-    /* Modals */
-    .modal {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 12px;
-      padding: 1.75rem;
-      width: 100%;
-      max-width: 420px;
-    }
-    .modal-lg  { max-width: 640px; }
-    .modal-xl  { max-width: 760px; max-height: 88vh; overflow-y: auto; }
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 2px; }
 
-    /* Sidebar */
+    /* ─── APP SHELL ─── */
+    #app {
+      display: flex;
+      height: 100vh;
+      height: 100dvh;
+      overflow: hidden;
+      padding-top: var(--safe-top);
+    }
+
+    /* ─── SIDEBAR ─── */
     #sidebar {
-      width: 220px;
-      min-width: 220px;
-      background: #0f172a;
-      border-right: 1px solid #1e293b;
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
       display: flex;
       flex-direction: column;
       overflow-y: auto;
+      padding-left: var(--safe-left);
     }
 
-    /* Main */
-    #main-content {
-      flex: 1;
-      overflow-y: auto;
+    .sidebar-brand {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-icon {
+      width: 32px; height: 32px;
+      border-radius: 9px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .brand-icon svg { width: 16px; height: 16px; color: #fff; }
+    .brand-name {
+      font-size: 0.92rem;
+      font-weight: 600;
+      color: var(--text-1);
+      letter-spacing: -0.01em;
+    }
+    .brand-sub {
+      font-size: 0.68rem;
+      color: var(--text-3);
+      margin-top: 1px;
     }
 
-    /* Nav items */
+    .sidebar-nav { padding: 12px 10px; flex: 1; }
+    .nav-section-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 8px 10px 4px;
+    }
     .nav-item {
-      display: flex; align-items: center; gap: 9px;
-      padding: 7px 10px; border-radius: 7px;
-      cursor: pointer; color: #94a3b8;
-      font-size: 0.82rem; font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      color: var(--text-2);
+      font-size: 0.82rem;
+      font-weight: 500;
       transition: background 0.12s, color 0.12s;
       user-select: none;
     }
-    .nav-item:hover  { background: #334155; color: #f8fafc; }
-    .nav-item.active { background: rgba(5,150,105,0.15); color: #10b981; }
+    .nav-item:hover { background: var(--bg-2); color: var(--text-1); }
+    .nav-item.active { background: var(--accent-bg); color: var(--accent); }
+    .nav-item svg { width: 15px; height: 15px; flex-shrink: 0; }
+    .nav-sep { height: 1px; background: var(--border); margin: 10px 10px; }
 
-    /* Buttons */
-    .btn {
-      display: inline-flex; align-items: center; gap: 6px;
-      padding: 7px 14px; border-radius: 7px;
-      font-size: 0.82rem; font-weight: 500;
-      cursor: pointer; border: none;
-      transition: opacity 0.12s, background 0.12s;
-      font-family: 'DM Sans', sans-serif;
-      white-space: nowrap;
-    }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-primary   { background: #059669; color: #fff; }
-    .btn-primary:hover:not(:disabled)   { background: #047857; }
-    .btn-secondary { background: #334155; color: #f8fafc; }
-    .btn-secondary:hover:not(:disabled) { background: #475569; }
-    .btn-danger    { background: #e11d48; color: #fff; }
-    .btn-danger:hover:not(:disabled)    { background: #be123c; }
-    .btn-ghost     { background: transparent; color: #94a3b8; border: 1px solid #334155; }
-    .btn-ghost:hover:not(:disabled)     { background: #1e293b; color: #f8fafc; }
-    .btn-icon      { padding: 6px; }
-
-    /* Inputs */
-    .inp {
-      background: #0f172a;
-      border: 1px solid #334155;
-      border-radius: 7px;
-      color: #f8fafc;
-      padding: 8px 12px;
-      font-size: 0.875rem;
-      font-family: 'DM Sans', sans-serif;
-      width: 100%; outline: none;
-      transition: border-color 0.15s;
-    }
-    .inp:focus        { border-color: #059669; }
-    .inp::placeholder { color: #475569; }
-
-    /* Cards */
-    .doc-card {
-      border: 1px solid #334155;
-      border-radius: 10px;
-      background: #1e293b;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .doc-card:hover { border-color: #475569; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
-
-    /* Drop zone */
-    .drop-zone {
-      border: 1.5px dashed #334155;
-      border-radius: 8px; padding: 1.25rem;
-      text-align: center; cursor: pointer;
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .drop-zone:hover, .drop-zone.dragover {
-      border-color: #059669;
-      background: rgba(5,150,105,0.05);
+    .sidebar-bottom {
+      padding: 10px;
+      border-top: 1px solid var(--border);
+      padding-bottom: calc(10px + var(--safe-bot));
     }
 
-    /* Tag pill */
-    .tag-pill {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #334155; color: #cbd5e1;
-      border-radius: 4px; padding: 2px 8px;
-      font-size: 0.72rem;
+    /* ─── MAIN CONTENT ─── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      padding-right: var(--safe-right);
     }
 
-    /* Badges */
-    .badge-on    { background: rgba(5,150,105,0.14); color: #10b981; }
-    .badge-off   { background: rgba(100,116,139,0.14); color: #64748b; }
-
-    /* Separator */
-    .sep { height: 1px; background: #1e293b; }
-
-    /* PIN dots */
-    .pin-dot { width: 11px; height: 11px; border-radius: 50%; background: #334155; transition: background 0.12s; }
-    .pin-dot.filled { background: #059669; }
-
-    /* Progress */
-    .prog-bar  { height: 3px; background: #334155; border-radius: 2px; overflow: hidden; }
-    .prog-fill { height: 100%; background: #059669; transition: width 0.3s; }
-
-    /* Toast */
-    #toast-wrap {
-      position: fixed; bottom: 20px; right: 20px;
-      z-index: 9999; display: flex; flex-direction: column; gap: 7px;
-      pointer-events: none;
-    }
-    .toast {
-      background: #1e293b; border: 1px solid #334155;
-      border-radius: 8px; padding: 9px 14px;
-      font-size: 0.8rem; color: #f8fafc;
-      max-width: 300px; display: flex; align-items: center; gap: 8px;
-      animation: toastIn 0.2s ease;
-    }
-    .toast.ok   { border-left: 3px solid #059669; }
-    .toast.err  { border-left: 3px solid #e11d48; }
-    .toast.info { border-left: 3px solid #475569; }
-    @keyframes toastIn { from { opacity:0; transform:translateX(16px); } to { opacity:1; transform:none; } }
-
-    /* Topbar */
+    /* ─── TOPBAR ─── */
     #topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 12px 24px;
-      border-bottom: 1px solid #1e293b;
-      background: #0f172a;
-      position: sticky; top: 0; z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    #topbar-left { display: flex; align-items: center; gap: 12px; }
+    #mobile-menu-btn {
+      display: none;
+      width: 36px; height: 36px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+    }
+    #mobile-menu-btn svg { width: 16px; height: 16px; color: var(--text-2); }
+    #sec-title { font-size: 1rem; font-weight: 600; color: var(--text-1); }
+    #sec-sub   { font-size: 0.75rem; color: var(--text-3); margin-top: 1px; }
+
+    #saved-badge {
+      display: none;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      color: var(--green);
+      background: var(--green-bg);
+      padding: 4px 10px;
+      border-radius: 20px;
+    }
+    #saved-badge::before {
+      content: '';
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      display: block;
     }
 
-    /* Section grid */
+    /* ─── SECTION CONTENT ─── */
+    #section-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      padding-bottom: calc(24px + var(--safe-bot));
+    }
+
+    .sec-content { display: none; }
+    .sec-content.active { display: block; }
+
+    /* ─── DOC GRID ─── */
     .doc-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+      gap: 12px;
     }
 
-    @media (max-width: 640px) {
-      .doc-grid { grid-template-columns: 1fr; }
-      #sidebar  { display: none; }
+    /* ─── DOC CARD ─── */
+    .doc-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      cursor: default;
     }
+    .doc-card:hover { border-color: var(--border-2); box-shadow: var(--shadow-sm); }
+
+    .card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .card-icon-wrap {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-2);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .card-icon-wrap svg { width: 16px; height: 16px; color: var(--text-2); }
+    .card-icon-wrap.filled { background: var(--accent-bg); }
+    .card-icon-wrap.filled svg { color: var(--accent); }
+    .card-label { font-size: 0.84rem; font-weight: 500; color: var(--text-1); line-height: 1.35; }
+    .card-hint  { font-size: 0.72rem; color: var(--text-3); margin-top: 2px; }
+
+    .status-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--border-2);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .status-dot.filled { background: var(--accent); }
+
+    /* text preview in card */
+    .card-text-val {
+      font-size: 0.84rem;
+      font-weight: 500;
+      color: var(--text-1);
+      background: var(--bg-2);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-family: 'DM Mono', 'Fira Code', monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      letter-spacing: 0.02em;
+    }
+
+    /* image thumb */
+    .card-thumb {
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      height: 80px;
+      background: var(--bg-2);
+    }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
+
+    /* file indicator */
+    .card-file-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-2);
+      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: var(--text-2);
+    }
+    .card-file-row svg { width: 13px; height: 13px; flex-shrink: 0; color: var(--accent); }
+
+    .card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: auto;
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+      transition: background 0.12s, opacity 0.12s, transform 0.08s;
+      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn svg { width: 13px; height: 13px; }
+    .btn-icon { padding: 8px; }
+    .btn-sm { padding: 6px 10px; font-size: 0.74rem; }
+
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+
+    .btn-secondary { background: var(--bg-2); color: var(--text-1); border: 1px solid var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: var(--bg-3); }
+
+    .btn-ghost { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { background: var(--bg-2); color: var(--text-1); }
+
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover:not(:disabled) { opacity: 0.88; }
+
+    .btn-danger-ghost { background: var(--danger-bg); color: var(--danger); border: 1px solid #f0cccc; }
+
+    /* ─── INPUTS ─── */
+    .inp {
+      width: 100%;
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-1);
+      padding: 10px 13px;
+      font-size: 0.875rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      -webkit-appearance: none;
+    }
+    .inp:focus { border-color: var(--accent); background: var(--surface); }
+    .inp::placeholder { color: var(--text-3); }
+
+    textarea.inp { resize: vertical; min-height: 80px; }
+
+    /* ─── OVERLAY & MODAL ─── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(26,20,16,0.45);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+      z-index: 100;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: calc(var(--safe-top) + 16px) 0 0;
+    }
+    @media (min-width: 600px) {
+      .overlay { align-items: center; padding: 20px; }
+    }
+
+    .modal {
+      background: var(--surface);
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+      padding: 24px;
+      width: 100%;
+      max-width: 480px;
+      max-height: 92dvh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-lg);
+      /* drag handle */
+      position: relative;
+    }
+    .modal::before {
+      content: '';
+      display: block;
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--border-2);
+      margin: -8px auto 20px;
+    }
+    @media (min-width: 600px) {
+      .modal {
+        border-radius: var(--radius-xl);
+        max-height: 88vh;
+      }
+      .modal::before { display: none; }
+    }
+
+    .modal-lg  { max-width: 560px; }
+    .modal-xl  { max-width: 640px; max-height: 94dvh; }
+
+    .modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .modal-title    { font-size: 1rem; font-weight: 600; color: var(--text-1); }
+    .modal-subtitle { font-size: 0.78rem; color: var(--text-3); margin-top: 2px; }
+    .modal-close {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--bg-2);
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.12s;
+    }
+    .modal-close:hover { background: var(--bg-3); }
+    .modal-close svg { width: 14px; height: 14px; color: var(--text-2); }
+
+    /* ─── LABEL / FORM ─── */
+    .form-row { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 0.74rem;
+      font-weight: 500;
+      color: var(--text-2);
+      margin-bottom: 6px;
+      letter-spacing: 0.01em;
+    }
+    .form-err {
+      font-size: 0.76rem;
+      color: var(--danger);
+      margin-top: 6px;
+      display: none;
+    }
+
+    /* ─── DROP ZONE ─── */
+    .drop-zone {
+      border: 1.5px dashed var(--border-2);
+      border-radius: var(--radius);
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .drop-zone:hover, .drop-zone.over {
+      border-color: var(--accent);
+      background: var(--accent-bg);
+    }
+    .drop-zone svg { color: var(--text-3); margin: 0 auto 8px; display: block; }
+    .drop-zone-label { font-size: 0.82rem; color: var(--text-2); }
+    .drop-zone-sub   { font-size: 0.72rem; color: var(--text-3); margin-top: 3px; }
+
+    /* ─── TAG PILL ─── */
+    .tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--accent-bg);
+      color: var(--accent-dark);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.72rem;
+      font-weight: 500;
+    }
+    .tag button {
+      background: none; border: none; cursor: pointer;
+      color: var(--accent); display: flex; align-items: center;
+      padding: 0; line-height: 1;
+    }
+    .tag button svg { width: 10px; height: 10px; }
+
+    /* ─── PIN SCREEN ─── */
+    #screen-pin {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      padding-top: calc(24px + var(--safe-top));
+      padding-bottom: calc(24px + var(--safe-bot));
+    }
+
+    .pin-card {
+      width: 100%;
+      max-width: 360px;
+      background: var(--surface);
+      border-radius: var(--radius-xl);
+      padding: 32px 28px;
+      box-shadow: var(--shadow);
+    }
+
+    .pin-logo {
+      width: 48px; height: 48px;
+      border-radius: 14px;
+      background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+    .pin-logo svg { width: 24px; height: 24px; color: #fff; }
+
+    .pin-title { font-size: 1.2rem; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+    .pin-sub   { font-size: 0.8rem; color: var(--text-3); margin-bottom: 24px; line-height: 1.5; }
+
+    .pin-dots  { display: flex; gap: 8px; justify-content: center; margin-bottom: 16px; }
+    .pin-dot   { width: 10px; height: 10px; border-radius: 50%; background: var(--border-2); transition: background 0.12s; }
+    .pin-dot.on{ background: var(--accent); }
+
+    /* ─── SECTION: IDENTITAS sub-layout ─── */
+    .subsection-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text-3);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      margin-top: 20px;
+    }
+    .subsection-title:first-child { margin-top: 0; }
+
+    /* ─── CV LIST ─── */
+    .cv-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-bottom: 8px;
+    }
+    .cv-item-icon {
+      width: 32px; height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--accent-bg);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .cv-item-icon svg { width: 14px; height: 14px; color: var(--accent); }
+    .cv-item-name { font-size: 0.82rem; font-weight: 500; color: var(--text-1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cv-item-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+
+    /* ─── EXISTING FILES IN MODAL ─── */
+    .existing-file {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8rem;
+    }
+    .existing-file:last-child { border-bottom: none; }
+    .existing-file svg { width: 13px; height: 13px; color: var(--accent); flex-shrink: 0; }
+    .existing-file-name { flex: 1; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ─── DRIVE MODAL ─── */
+    .drive-status {
+      background: var(--bg-2);
+      border-radius: var(--radius);
+      padding: 14px;
+      margin-bottom: 16px;
+      font-size: 0.82rem;
+    }
+    .prog-bar  { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+    .prog-fill { height: 100%; background: var(--accent); transition: width 0.3s; }
+
+    /* ─── TOAST ─── */
+    #toasts {
+      position: fixed;
+      bottom: calc(20px + var(--safe-bot));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      pointer-events: none;
+      width: calc(100% - 32px);
+      max-width: 360px;
+    }
+    .toast {
+      background: var(--text-1);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 10px 16px;
+      font-size: 0.8rem;
+      display: flex; align-items: center; gap: 8px;
+      box-shadow: var(--shadow);
+      animation: toastIn .22s ease;
+      width: 100%;
+    }
+    .toast svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .toast.ok   { background: #1a3a2a; }
+    .toast.err  { background: #3a1a1a; }
+    @keyframes toastIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+    /* ─── MOBILE SIDEBAR OVERLAY ─── */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,20,16,0.4);
+      z-index: 50;
+    }
+    #sidebar-overlay.show { display: block; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed;
+        inset: 0 auto 0 0;
+        z-index: 60;
+        width: 260px;
+        transform: translateX(-100%);
+        transition: transform 0.25s ease;
+        padding-top: var(--safe-top);
+      }
+      #sidebar.open { transform: translateX(0); }
+      #mobile-menu-btn { display: flex; }
+      #topbar { padding: 12px 16px; }
+      #section-wrap { padding: 16px; }
+      .doc-grid { grid-template-columns: 1fr; }
+      .pin-card { padding: 28px 20px; }
+    }
+
+    @media (min-width: 1200px) {
+      .doc-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* ─── PWA INSTALL BANNER ─── */
+    #pwa-banner {
+      display: none;
+      position: fixed;
+      bottom: calc(20px + var(--safe-bot));
+      left: 16px; right: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-lg);
+      z-index: 90;
+      align-items: center;
+      gap: 12px;
+    }
+    #pwa-banner.show { display: flex; }
+    .pwa-icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pwa-icon svg { width: 20px; height: 20px; color: #fff; }
+    .pwa-text { flex: 1; }
+    .pwa-title { font-size: 0.84rem; font-weight: 600; color: var(--text-1); }
+    .pwa-sub   { font-size: 0.72rem; color: var(--text-3); margin-top: 1px; }
   </style>
 </head>
-
 <body>
-<div id="app">
 
-  <!-- ═══ SCREEN: AUTH ═══ -->
-  <div id="screen-auth" class="overlay" style="display:none;">
-    <div class="modal">
-
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
-        <div style="width:36px;height:36px;border-radius:9px;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i data-lucide="shield-check" style="width:18px;height:18px;color:#fff;"></i>
-        </div>
-        <div>
-          <div style="font-weight:600;color:#f8fafc;line-height:1.2;">SmartVault</div>
-          <div style="font-size:0.75rem;color:#64748b;">Brankas Dokumen Digital</div>
-        </div>
-      </div>
-
-      <!-- SETUP -->
-      <div id="auth-setup" style="display:none;">
-        <div style="font-weight:600;color:#f8fafc;margin-bottom:4px;">Bikin PIN buat Vault lu</div>
-        <div style="font-size:0.82rem;color:#64748b;margin-bottom:18px;">Minimal 6 karakter. Ini satu-satunya kunci lu — gak ada recovery kalau lupa!</div>
-        <div style="margin-bottom:12px;">
-          <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">PIN / Password</label>
-          <input id="setup-pin1" type="password" class="inp" placeholder="Bikin PIN lu..." autocomplete="new-password" />
-        </div>
-        <div style="margin-bottom:18px;">
-          <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">Konfirmasi PIN</label>
-          <input id="setup-pin2" type="password" class="inp" placeholder="Ketik ulang PIN..." autocomplete="new-password" />
-        </div>
-        <div id="setup-err" style="color:#e11d48;font-size:0.78rem;margin-bottom:10px;display:none;"></div>
-        <button class="btn btn-primary" style="width:100%;" onclick="App.setupVault()">
-          <i data-lucide="lock" style="width:14px;height:14px;"></i> Amanin Vault
-        </button>
-      </div>
-
-      <!-- LOGIN -->
-      <div id="auth-login" style="display:none;">
-        <div style="font-weight:600;color:#f8fafc;margin-bottom:4px;">Masukin PIN lu</div>
-        <div style="font-size:0.82rem;color:#64748b;margin-bottom:18px;">Vault lu udah terkunci. Masuk dulu bro.</div>
-        <div id="pin-dots" style="display:flex;gap:8px;justify-content:center;margin-bottom:14px;"></div>
-        <input id="login-pin" type="password" class="inp" placeholder="••••••"
-          style="text-align:center;letter-spacing:0.3em;"
-          autocomplete="current-password" maxlength="64"
-          oninput="buildPinDots(this.value)"
-          onkeydown="if(event.key==='Enter') App.loginVault()" />
-        <div id="login-err" style="color:#e11d48;font-size:0.78rem;margin-top:8px;display:none;"></div>
-        <button class="btn btn-primary" style="width:100%;margin-top:14px;" onclick="App.loginVault()">
-          <i data-lucide="unlock" style="width:14px;height:14px;"></i> Buka Vault
-        </button>
-        <div class="sep" style="margin:16px 0;"></div>
-        <button class="btn btn-ghost" style="width:100%;" onclick="App.showImportModal()">
-          <i data-lucide="upload" style="width:14px;height:14px;"></i> Restore dari file .vault
-        </button>
-      </div>
-
+<!-- ═══════ PIN / AUTH SCREEN ═══════ -->
+<div id="screen-pin">
+  <div class="pin-card">
+    <div class="pin-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
     </div>
-  </div>
 
-  <!-- ═══ MAIN LAYOUT ═══ -->
-  <div id="main-layout">
-
-    <!-- Sidebar -->
-    <aside id="sidebar">
-      <!-- Brand -->
-      <div style="display:flex;align-items:center;gap:9px;padding:14px 12px;border-bottom:1px solid #1e293b;">
-        <div style="width:28px;height:28px;border-radius:7px;background:#059669;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-          <i data-lucide="shield-check" style="width:14px;height:14px;color:#fff;"></i>
-        </div>
-        <span style="font-weight:600;color:#f8fafc;font-size:0.88rem;">SmartVault</span>
+    <!-- SETUP -->
+    <div id="pin-setup" style="display:none;">
+      <div class="pin-title">Buat PIN Vault lu</div>
+      <div class="pin-sub">Minimal 6 karakter. Ini satu-satunya kunci — tidak ada pemulihan jika lupa.</div>
+      <div class="form-row">
+        <label class="form-label">Buat PIN</label>
+        <input id="s-pin1" type="password" class="inp" placeholder="Buat PIN..." autocomplete="new-password" />
       </div>
-
-      <!-- Nav -->
-      <nav style="padding:8px;flex:1;">
-        <div style="font-size:0.7rem;color:#475569;font-weight:600;padding:8px 8px 4px;text-transform:uppercase;letter-spacing:0.05em;">Kategori</div>
-        <div class="nav-item active" data-sec="identitas" onclick="App.switchSection('identitas',this)">
-          <i data-lucide="id-card"         style="width:15px;height:15px;flex-shrink:0;"></i> Identitas
-        </div>
-        <div class="nav-item" data-sec="mobilitas" onclick="App.switchSection('mobilitas',this)">
-          <i data-lucide="car"             style="width:15px;height:15px;flex-shrink:0;"></i> Mobilitas
-        </div>
-        <div class="nav-item" data-sec="legalitas" onclick="App.switchSection('legalitas',this)">
-          <i data-lucide="briefcase"       style="width:15px;height:15px;flex-shrink:0;"></i> Legalitas & Karir
-        </div>
-        <div class="nav-item" data-sec="pendidikan" onclick="App.switchSection('pendidikan',this)">
-          <i data-lucide="graduation-cap" style="width:15px;height:15px;flex-shrink:0;"></i> Pendidikan
-        </div>
-        <div class="nav-item" data-sec="sertifikasi" onclick="App.switchSection('sertifikasi',this)">
-          <i data-lucide="award"           style="width:15px;height:15px;flex-shrink:0;"></i> Sertifikasi
-        </div>
-        <div class="nav-item" data-sec="pasfoto" onclick="App.switchSection('pasfoto',this)">
-          <i data-lucide="image"           style="width:15px;height:15px;flex-shrink:0;"></i> Pasfoto
-        </div>
-
-        <div class="sep" style="margin:10px 0;"></div>
-        <div style="font-size:0.7rem;color:#475569;font-weight:600;padding:0 8px 4px;text-transform:uppercase;letter-spacing:0.05em;">Tools</div>
-        <div class="nav-item" onclick="App.exportVault()">
-          <i data-lucide="archive"         style="width:15px;height:15px;flex-shrink:0;"></i> Export .vault
-        </div>
-        <div class="nav-item" onclick="App.showImportModal()">
-          <i data-lucide="archive-restore" style="width:15px;height:15px;flex-shrink:0;"></i> Import .vault
-        </div>
-        <div class="nav-item" onclick="showModal('modal-drive')">
-          <i data-lucide="cloud"           style="width:15px;height:15px;flex-shrink:0;"></i> Google Drive
-        </div>
-      </nav>
-
-      <!-- Bottom -->
-      <div style="padding:8px;border-top:1px solid #1e293b;">
-        <div class="nav-item" onclick="showModal('modal-change-pin')">
-          <i data-lucide="key-round" style="width:15px;height:15px;flex-shrink:0;"></i> Ganti PIN
-        </div>
-        <div class="nav-item" onclick="App.lockVault()">
-          <i data-lucide="lock"      style="width:15px;height:15px;flex-shrink:0;"></i> Gembok Vault
-        </div>
+      <div class="form-row">
+        <label class="form-label">Konfirmasi PIN</label>
+        <input id="s-pin2" type="password" class="inp" placeholder="Ulangi PIN..." autocomplete="new-password" />
+        <div id="s-err" class="form-err"></div>
       </div>
-    </aside>
+      <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="App.setup()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Amankan Vault
+      </button>
+    </div>
 
-    <!-- Main content -->
-    <div id="main-content">
-
-      <!-- Topbar -->
-      <div id="topbar">
-        <div>
-          <div id="sec-title"    style="font-weight:600;color:#f8fafc;font-size:0.95rem;"></div>
-          <div id="sec-subtitle" style="font-size:0.75rem;color:#64748b;margin-top:1px;"></div>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <!-- FIX: hapus display:flex yang duplikat, biarkan flashSaved() yang handle -->
-          <div id="saved-badge" style="display:none;font-size:0.72rem;color:#10b981;align-items:center;gap:5px;">
-            <div style="width:6px;height:6px;border-radius:50%;background:#10b981;"></div> Tersimpan
-          </div>
-        </div>
+    <!-- LOGIN -->
+    <div id="pin-login" style="display:none;">
+      <div class="pin-title">Selamat datang</div>
+      <div class="pin-sub">Masukkan PIN untuk membuka vault lu.</div>
+      <div class="pin-dots" id="pin-dots"></div>
+      <div class="form-row">
+        <input id="l-pin" type="password" class="inp" placeholder="Masukkan PIN..."
+          style="text-align:center;letter-spacing:0.25em;font-size:1.1rem;"
+          autocomplete="current-password" maxlength="64" />
+        <div id="l-err" class="form-err"></div>
       </div>
-
-      <!-- Sections -->
-      <div style="padding:20px;flex:1;">
-        <div id="sec-identitas"   class="sec-content doc-grid"></div>
-        <div id="sec-mobilitas"   class="sec-content doc-grid" style="display:none;"></div>
-        <div id="sec-legalitas"   class="sec-content"          style="display:none;"></div>
-        <div id="sec-pendidikan"  class="sec-content doc-grid" style="display:none;"></div>
-        <div id="sec-sertifikasi" class="sec-content doc-grid" style="display:none;"></div>
-        <div id="sec-pasfoto"     class="sec-content doc-grid" style="display:none;"></div>
-      </div>
-    </div>
-  </div><!-- /main-layout -->
-
-</div><!-- /app -->
-
-<!-- ═══ MODALS ═══ -->
-
-<!-- Import .vault -->
-<div id="modal-import" class="overlay" style="display:none;">
-  <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-weight:600;color:#f8fafc;">Restore dari .vault</div>
-      <button class="btn btn-ghost btn-icon" onclick="hideModal('modal-import')"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
-    </div>
-    <div style="font-size:0.82rem;color:#64748b;margin-bottom:12px;">Pilih file <code style="color:#10b981;">.vault</code> yang udah lo export sebelumnya.</div>
-    <div class="drop-zone" id="import-drop" onclick="document.getElementById('import-file-input').click()">
-      <i data-lucide="file-up" style="width:22px;height:22px;color:#475569;margin:0 auto 6px;display:block;"></i>
-      <div style="font-size:0.82rem;color:#94a3b8;">Klik atau drop file .vault di sini</div>
-    </div>
-    <input type="file" id="import-file-input" accept=".vault,.json" style="display:none;" onchange="App.handleImportFile(event)" />
-    <div style="margin-top:12px;margin-bottom:14px;">
-      <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">PIN yang dipake saat export</label>
-      <input id="import-pin" type="password" class="inp" placeholder="Masukin PIN lama lu..." />
-    </div>
-    <div id="import-err" style="color:#e11d48;font-size:0.78rem;margin-bottom:10px;display:none;"></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('modal-import')">Batal</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="App.importVaultFile()">
-        <i data-lucide="download" style="width:13px;height:13px;"></i> Restore
+      <button class="btn btn-primary" style="width:100%;padding:12px;" onclick="App.login()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
+        Buka Vault
+      </button>
+      <div style="height:1px;background:var(--border);margin:16px 0;"></div>
+      <button class="btn btn-ghost" style="width:100%;" onclick="App.showImport()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Restore dari file .vault
       </button>
     </div>
   </div>
 </div>
 
-<!-- Doc edit modal -->
-<div id="modal-doc" class="overlay" style="display:none;">
-  <div class="modal modal-xl">
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:18px;">
+<!-- ═══════ MAIN APP ═══════ -->
+<div id="app" style="display:none;">
+
+  <!-- Sidebar overlay (mobile) -->
+  <div id="sidebar-overlay" onclick="App.closeSidebar()"></div>
+
+  <!-- Sidebar -->
+  <aside id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg>
+      </div>
       <div>
-        <div id="mdoc-title"    style="font-weight:600;color:#f8fafc;font-size:0.95rem;"></div>
-        <div id="mdoc-subtitle" style="font-size:0.75rem;color:#64748b;margin-top:2px;"></div>
+        <div class="brand-name">SmartVault</div>
+        <div class="brand-sub">Brankas Dokumen</div>
       </div>
-      <button class="btn btn-ghost btn-icon" onclick="hideModal('modal-doc')"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
     </div>
 
-    <!-- text -->
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Kategori</div>
+      <div class="nav-item active" data-sec="identitas" onclick="App.nav('identitas',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Identitas &amp; Kependudukan
+      </div>
+      <div class="nav-item" data-sec="mobilitas" onclick="App.nav('mobilitas',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect width="13" height="9" x="9" y="11" rx="1"/><circle cx="11" cy="20" r="1"/><circle cx="20" cy="20" r="1"/></svg>
+        Mobilitas
+      </div>
+      <div class="nav-item" data-sec="legalitas" onclick="App.nav('legalitas',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>
+        Legalitas &amp; Karir
+      </div>
+      <div class="nav-item" data-sec="pendidikan" onclick="App.nav('pendidikan',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        Pendidikan Formal
+      </div>
+      <div class="nav-item" data-sec="sertifikasi" onclick="App.nav('sertifikasi',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
+        Sertifikasi &amp; Bahasa
+      </div>
+      <div class="nav-item" data-sec="pasfoto" onclick="App.nav('pasfoto',this)">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        Pasfoto Formal
+      </div>
+
+      <div class="nav-sep"></div>
+      <div class="nav-section-label">Manajemen Data</div>
+      <div class="nav-item" onclick="App.exportVault()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Ekspor .vault
+      </div>
+      <div class="nav-item" onclick="App.showImport()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Impor .vault
+      </div>
+      <div class="nav-item" onclick="showModal('m-drive')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
+        Sinkronisasi Google Drive
+      </div>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="nav-item" onclick="showModal('m-pin')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="16" r="1"/><rect x="3" y="10" width="18" height="12" rx="2"/><path d="M7 10V7a5 5 0 0 1 10 0v3"/></svg>
+        Ganti PIN
+      </div>
+      <div class="nav-item" onclick="App.lock()">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Kunci Vault
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <div id="main">
+    <div id="topbar">
+      <div id="topbar-left">
+        <button id="mobile-menu-btn" onclick="App.openSidebar()">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="18" x2="20" y2="18"/></svg>
+        </button>
+        <div>
+          <div id="sec-title">Identitas &amp; Kependudukan</div>
+          <div id="sec-sub">Data identitas resmi diri kamu</div>
+        </div>
+      </div>
+      <div id="saved-badge">Tersimpan</div>
+    </div>
+
+    <div id="section-wrap">
+      <div id="sec-identitas"   class="sec-content active"></div>
+      <div id="sec-mobilitas"   class="sec-content"></div>
+      <div id="sec-legalitas"   class="sec-content"></div>
+      <div id="sec-pendidikan"  class="sec-content"></div>
+      <div id="sec-sertifikasi" class="sec-content"></div>
+      <div id="sec-pasfoto"     class="sec-content"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- Doc modal -->
+<div id="m-doc" class="overlay" style="display:none;" onclick="App._overlayClick(event,'m-doc')">
+  <div class="modal modal-xl" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="mdoc-title"></div>
+        <div class="modal-subtitle" id="mdoc-sub"></div>
+      </div>
+      <button class="modal-close" onclick="hideModal('m-doc')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
+    <!-- text input -->
     <div id="mdoc-text-sec" style="display:none;">
-      <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">Isi Data</label>
-      <textarea id="mdoc-text" class="inp" rows="4" placeholder="Ketik atau paste data lu di sini..." style="resize:vertical;"></textarea>
+      <div class="form-row">
+        <label class="form-label">Isi Data</label>
+        <textarea id="mdoc-text" class="inp" placeholder="Ketik atau paste data di sini..."></textarea>
+      </div>
     </div>
 
-    <!-- file -->
+    <!-- file input -->
     <div id="mdoc-file-sec" style="display:none;">
-      <div id="mdoc-existing" style="margin-bottom:10px;"></div>
-      <div class="drop-zone" id="mdoc-dropzone" onclick="document.getElementById('mdoc-file-input').click()">
-        <i data-lucide="upload-cloud" style="width:22px;height:22px;color:#475569;margin:0 auto 6px;display:block;"></i>
-        <div style="font-size:0.82rem;color:#94a3b8;">Klik atau drop file di sini</div>
-        <div style="font-size:0.72rem;color:#475569;margin-top:3px;">PDF, PNG, JPG — maks 10MB</div>
+      <div id="mdoc-existing" style="margin-bottom:12px;"></div>
+      <div class="drop-zone" id="mdoc-drop" onclick="document.getElementById('mdoc-finput').click()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div class="drop-zone-label">Klik atau seret file ke sini</div>
+        <div class="drop-zone-sub">PDF, Word (.doc/.docx), PNG, JPG/JPEG — maks. 15 MB</div>
       </div>
-      <input type="file" id="mdoc-file-input" multiple accept=".pdf,image/*" style="display:none;" onchange="App.handleFileSelect(event)" />
+      <input type="file" id="mdoc-finput" style="display:none;"
+        multiple accept=".pdf,.doc,.docx,image/png,image/jpeg,image/jpg"
+        onchange="App.onFileSelect(event)" />
 
       <!-- CV tags -->
-      <div id="mdoc-cv-tags" style="display:none;margin-top:12px;">
-        <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">Label / Versi CV</label>
+      <div id="mdoc-cv-sec" style="display:none;margin-top:14px;">
+        <label class="form-label">Label / Versi CV</label>
         <div style="display:flex;gap:8px;">
-          <input id="mdoc-tag-inp" type="text" class="inp" placeholder="cth: D3, Fresh Graduate, 2024..." style="flex:1;" />
-          <button class="btn btn-secondary" onclick="App.addTag()">Tambah</button>
+          <input id="mdoc-tag-inp" type="text" class="inp" placeholder="cth: Fresh Graduate, Teknik Informatika, 2024..." style="flex:1;" />
+          <button class="btn btn-secondary" onclick="App.addTag()">+ Tambah</button>
         </div>
-        <div id="mdoc-tags-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
+        <div id="mdoc-tags" style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
       </div>
     </div>
 
     <!-- preview -->
-    <div id="mdoc-preview" style="margin-top:12px;display:none;">
-      <div style="border:1px solid #334155;border-radius:8px;overflow:hidden;max-height:300px;display:flex;align-items:center;justify-content:center;background:#0f172a;">
-        <img id="mdoc-prev-img" style="display:none;max-width:100%;max-height:300px;object-fit:contain;" />
-        <div id="mdoc-prev-pdf" style="display:none;padding:16px;font-size:0.82rem;color:#94a3b8;align-items:center;gap:8px;">
-          <i data-lucide="file-text" style="width:16px;height:16px;"></i>
-          <span id="mdoc-prev-pdf-name"></span>
+    <div id="mdoc-preview" style="display:none;margin-top:12px;">
+      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;max-height:280px;background:var(--bg-2);display:flex;align-items:center;justify-content:center;">
+        <img id="mdoc-pimg" style="display:none;max-width:100%;max-height:280px;object-fit:contain;" />
+        <div id="mdoc-pfile" style="display:none;padding:16px;font-size:0.82rem;color:var(--text-2);display:flex;align-items:center;gap:8px;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--accent);"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="mdoc-pfname"></span>
         </div>
       </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:18px;">
-      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('modal-doc')">Batal</button>
+    <div style="display:flex;gap:8px;margin-top:20px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('m-doc')">Batal</button>
       <button class="btn btn-primary" style="flex:1;" onclick="App.saveDoc()">
-        <i data-lucide="save" style="width:13px;height:13px;"></i> Simpen (Ctrl+Enter)
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Simpan
       </button>
     </div>
   </div>
 </div>
 
-<!-- Google Drive modal -->
-<div id="modal-drive" class="overlay" style="display:none;">
-  <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-weight:600;color:#f8fafc;">Google Drive Sync</div>
-      <button class="btn btn-ghost btn-icon" onclick="hideModal('modal-drive')"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+<!-- Import modal -->
+<div id="m-import" class="overlay" style="display:none;" onclick="App._overlayClick(event,'m-import')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div><div class="modal-title">Impor File .vault</div></div>
+      <button class="modal-close" onclick="hideModal('m-import')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
-
-    <div style="background:#0f172a;border:1px solid #334155;border-radius:8px;padding:12px;margin-bottom:14px;font-size:0.82rem;">
-      <div id="drive-user" style="color:#94a3b8;">Belum connect ke Google...</div>
-      <div id="drive-sync-time" style="font-size:0.72rem;color:#475569;margin-top:3px;display:none;"></div>
+    <div class="drop-zone" id="imp-drop" onclick="document.getElementById('imp-finput').click()" style="margin-bottom:14px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <div class="drop-zone-label">Klik atau seret file .vault</div>
     </div>
-
-    <div id="drive-prog" style="margin-bottom:14px;display:none;">
-      <div id="drive-prog-txt" style="font-size:0.75rem;color:#94a3b8;margin-bottom:6px;"></div>
-      <div class="prog-bar"><div class="prog-fill" id="drive-prog-fill" style="width:0%;"></div></div>
+    <input type="file" id="imp-finput" accept=".vault,.json" style="display:none;" onchange="App.onImportFile(event)" />
+    <div class="form-row">
+      <label class="form-label">PIN yang digunakan saat ekspor</label>
+      <input id="imp-pin" type="password" class="inp" placeholder="Masukkan PIN lama..." />
+      <div id="imp-err" class="form-err"></div>
     </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('m-import')">Batal</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="App.doImport()">Restore Sekarang</button>
+    </div>
+  </div>
+</div>
 
+<!-- Drive modal -->
+<div id="m-drive" class="overlay" style="display:none;" onclick="App._overlayClick(event,'m-drive')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div><div class="modal-title">Sinkronisasi Google Drive</div></div>
+      <button class="modal-close" onclick="hideModal('m-drive')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="drive-status">
+      <div id="drive-user" style="color:var(--text-2);">Belum terhubung ke Google</div>
+      <div id="drive-time" style="font-size:0.72rem;color:var(--text-3);margin-top:3px;display:none;"></div>
+      <div id="drive-prog" style="display:none;">
+        <div id="drive-prog-txt" style="font-size:0.72rem;color:var(--text-3);margin-top:6px;"></div>
+        <div class="prog-bar"><div class="prog-fill" id="drive-prog-fill" style="width:0%;"></div></div>
+      </div>
+    </div>
     <div style="display:flex;flex-direction:column;gap:8px;">
       <button class="btn btn-secondary" id="btn-gauth"    onclick="App.driveAuth()" style="width:100%;">
-        <i data-lucide="log-in" style="width:14px;height:14px;"></i> Login Google
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Login dengan Google
       </button>
-      <button class="btn btn-primary"   id="btn-gbackup"  onclick="App.driveBackup()"  disabled style="width:100%;">
-        <i data-lucide="cloud-upload"   style="width:14px;height:14px;"></i> Sync ke Google Drive
+      <button class="btn btn-primary" id="btn-gbak"  onclick="App.driveBackup()"  disabled style="width:100%;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="15 13 12 10 9 13"/><line x1="12" y1="10" x2="12" y2="16"/></svg>
+        Backup ke Drive
       </button>
-      <button class="btn btn-ghost"     id="btn-grestore" onclick="App.driveRestore()" disabled style="width:100%;">
-        <i data-lucide="cloud-download" style="width:14px;height:14px;"></i> Tarik dari Google Drive
+      <button class="btn btn-ghost" id="btn-gres"  onclick="App.driveRestore()" disabled style="width:100%;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><polyline points="9 13 12 16 15 13"/><line x1="12" y1="16" x2="12" y2="10"/></svg>
+        Tarik dari Drive
       </button>
-      <button class="btn btn-ghost"     id="btn-glogout"  onclick="App.driveLogout()"  style="display:none;width:100%;">
-        <i data-lucide="log-out" style="width:14px;height:14px;"></i> Disconnect Google
+      <button class="btn btn-danger-ghost" id="btn-glgt" onclick="App.driveLogout()" style="display:none;width:100%;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Putuskan Koneksi
       </button>
     </div>
-    <div style="font-size:0.72rem;color:#475569;margin-top:12px;">Data yang disync tetap terenkripsi — Google cuma nyimpen ciphertext.</div>
+    <div style="font-size:0.72rem;color:var(--text-3);margin-top:12px;line-height:1.5;">Data yang disinkronkan tetap terenkripsi — Google hanya menyimpan ciphertext, bukan data aslinya.</div>
   </div>
 </div>
 
 <!-- Change PIN modal -->
-<div id="modal-change-pin" class="overlay" style="display:none;">
-  <div class="modal">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <div style="font-weight:600;color:#f8fafc;">Ganti PIN</div>
-      <button class="btn btn-ghost btn-icon" onclick="hideModal('modal-change-pin')"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">PIN Lama</label>
-      <input id="cp-old"  type="password" class="inp" placeholder="PIN sekarang..." />
-    </div>
-    <div style="margin-bottom:12px;">
-      <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">PIN Baru</label>
-      <input id="cp-new1" type="password" class="inp" placeholder="PIN baru lu..." />
-    </div>
-    <div style="margin-bottom:16px;">
-      <label style="font-size:0.75rem;color:#94a3b8;display:block;margin-bottom:5px;">Konfirmasi PIN Baru</label>
-      <input id="cp-new2" type="password" class="inp" placeholder="Ketik ulang PIN baru..." />
-    </div>
-    <div id="cp-err" style="color:#e11d48;font-size:0.78rem;margin-bottom:10px;display:none;"></div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost"   style="flex:1;" onclick="hideModal('modal-change-pin')">Batal</button>
-      <button class="btn btn-primary" style="flex:1;" onclick="App.changePIN()">
-        <i data-lucide="key" style="width:13px;height:13px;"></i> Ganti PIN
+<div id="m-pin" class="overlay" style="display:none;" onclick="App._overlayClick(event,'m-pin')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div><div class="modal-title">Ganti PIN</div></div>
+      <button class="modal-close" onclick="hideModal('m-pin')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
+    </div>
+    <div class="form-row">
+      <label class="form-label">PIN Lama</label>
+      <input id="cp-old" type="password" class="inp" placeholder="PIN saat ini..." />
+    </div>
+    <div class="form-row">
+      <label class="form-label">PIN Baru</label>
+      <input id="cp-n1" type="password" class="inp" placeholder="PIN baru (min. 6 karakter)..." />
+    </div>
+    <div class="form-row">
+      <label class="form-label">Konfirmasi PIN Baru</label>
+      <input id="cp-n2" type="password" class="inp" placeholder="Ulangi PIN baru..." />
+      <div id="cp-err" class="form-err"></div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('m-pin')">Batal</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="App.changePin()">Simpan PIN Baru</button>
     </div>
   </div>
 </div>
 
 <!-- Delete confirm -->
-<div id="modal-delete" class="overlay" style="display:none;">
-  <div class="modal" style="max-width:360px;">
-    <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:18px;">
-      <div style="width:36px;height:36px;border-radius:8px;background:rgba(225,29,72,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;">
-        <i data-lucide="trash-2" style="width:16px;height:16px;color:#e11d48;"></i>
-      </div>
-      <div>
-        <div id="del-title" style="font-weight:600;color:#f8fafc;">Hapus ini?</div>
-        <div id="del-desc"  style="font-size:0.82rem;color:#64748b;margin-top:3px;">Aksi ini gak bisa di-undo bro.</div>
-      </div>
+<div id="m-del" class="overlay" style="display:none;" onclick="App._overlayClick(event,'m-del')">
+  <div class="modal" style="max-width:360px;" onclick="event.stopPropagation()">
+    <div style="margin-bottom:18px;">
+      <div class="modal-title" id="del-title">Hapus data ini?</div>
+      <div class="modal-subtitle" id="del-sub" style="margin-top:6px;">Tindakan ini tidak dapat dibatalkan.</div>
     </div>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-ghost"  style="flex:1;" onclick="hideModal('modal-delete')">Batal</button>
-      <button class="btn btn-danger" style="flex:1;" id="del-confirm-btn">Hapus</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="hideModal('m-del')">Batal</button>
+      <button class="btn btn-danger" style="flex:1;" id="del-ok">Hapus</button>
     </div>
   </div>
 </div>
 
-<!-- Toast container -->
-<div id="toast-wrap"></div>
+<!-- PWA install banner -->
+<div id="pwa-banner">
+  <div class="pwa-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
+  </div>
+  <div class="pwa-text">
+    <div class="pwa-title">Pasang sebagai aplikasi</div>
+    <div class="pwa-sub">Akses lebih cepat, bisa offline</div>
+  </div>
+  <button class="btn btn-primary btn-sm" id="pwa-install-btn">Pasang</button>
+  <button class="btn btn-ghost btn-sm btn-icon" onclick="document.getElementById('pwa-banner').classList.remove('show')">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+
+<!-- Toast -->
+<div id="toasts"></div>
 
 <script src="app.js"></script>
 </body>
