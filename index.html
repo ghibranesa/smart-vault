@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SmartVault — Brankas Dokumen Lu</title>
+
+  <!-- Google Fonts: DM Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+
+  <!-- localForage (IndexedDB wrapper) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+
+  <!-- CryptoJS AES-256 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+
+  <!-- Google Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Google API Client -->
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['DM Sans', 'sans-serif'] },
+          colors: {
+            slate: {
+              950: '#020617',
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
+              600: '#475569',
+              500: '#64748b',
+              400: '#94a3b8',
+              300: '#cbd5e1',
+              200: '#e2e8f0',
+              100: '#f1f5f9',
+              50:  '#f8fafc',
+            },
+            emerald: { 600: '#059669', 700: '#047857', 500: '#10b981' },
+            rose:    { 600: '#e11d48', 700: '#be123c', 500: '#f43f5e' },
+            amber:   { 500: '#f59e0b', 400: '#fbbf24' },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0;
+      background: #0f172a;
+      color: #f8fafc;
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100%;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #1e293b; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    /* Overlay & modal transitions */
+    .overlay { position: fixed; inset: 0; background: rgba(2,6,23,0.85); z-index: 50; display: flex; align-items: center; justify-content: center; }
+    .modal   { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 2rem; width: 100%; max-width: 440px; }
+    .modal-lg { max-width: 680px; }
+    .modal-xl { max-width: 820px; max-height: 90vh; overflow-y: auto; }
+
+    /* PIN dots */
+    .pin-dot { width: 12px; height: 12px; border-radius: 50%; background: #334155; transition: background 0.15s; }
+    .pin-dot.filled { background: #059669; }
+
+    /* File drop zone */
+    .drop-zone { border: 1.5px dashed #334155; border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+    .drop-zone:hover, .drop-zone.dragover { border-color: #059669; background: rgba(5,150,105,0.06); }
+
+    /* Card hover */
+    .doc-card { border: 1px solid #334155; border-radius: 10px; background: #1e293b; transition: border-color 0.2s, box-shadow 0.2s; }
+    .doc-card:hover { border-color: #475569; box-shadow: 0 4px 20px rgba(0,0,0,0.4); }
+
+    /* Status badge */
+    .badge-filled   { background: rgba(5,150,105,0.15); color: #10b981; }
+    .badge-empty    { background: rgba(148,163,184,0.1); color: #64748b; }
+    .badge-multiple { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    /* Sidebar nav active */
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 7px; cursor: pointer; color: #94a3b8; font-size: 0.85rem; font-weight: 500; transition: background 0.15s, color 0.15s; }
+    .nav-item:hover { background: #334155; color: #f8fafc; }
+    .nav-item.active { background: rgba(5,150,105,0.15); color: #10b981; }
+
+    /* Tag pill */
+    .tag-pill { display: inline-flex; align-items: center; gap: 4px; background: #334155; color: #cbd5e1; border-radius: 4px; padding: 2px 8px; font-size: 0.75rem; }
+
+    /* Btn variants */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 7px; font-size: 0.85rem; font-weight: 500; cursor: pointer; border: none; transition: opacity 0.15s, background 0.15s; font-family: 'DM Sans', sans-serif; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary   { background: #059669; color: #fff; }
+    .btn-primary:hover:not(:disabled)   { background: #047857; }
+    .btn-secondary { background: #334155; color: #f8fafc; }
+    .btn-secondary:hover:not(:disabled) { background: #475569; }
+    .btn-danger    { background: #e11d48; color: #fff; }
+    .btn-danger:hover:not(:disabled)    { background: #be123c; }
+    .btn-ghost     { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+    .btn-ghost:hover:not(:disabled)     { background: #334155; color: #f8fafc; }
+
+    /* Input */
+    .inp { background: #0f172a; border: 1px solid #334155; border-radius: 7px; color: #f8fafc; padding: 9px 13px; font-size: 0.875rem; font-family: 'DM Sans', sans-serif; width: 100%; outline: none; transition: border-color 0.15s; }
+    .inp:focus { border-color: #059669; }
+    .inp::placeholder { color: #475569; }
+
+    /* Toast */
+    #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+    .toast { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 10px 16px; font-size: 0.82rem; color: #f8fafc; max-width: 320px; display: flex; align-items: center; gap: 8px; animation: slideIn 0.25s ease; }
+    .toast.success { border-left: 3px solid #059669; }
+    .toast.error   { border-left: 3px solid #e11d48; }
+    .toast.info    { border-left: 3px solid #64748b; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: none; } }
+
+    /* Progress bar for sync */
+    .progress-bar { height: 3px; background: #334155; border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: #059669; transition: width 0.3s; }
+
+    /* Section header separator */
+    .section-sep { height: 1px; background: #334155; margin: 0; }
+
+    @media (max-width: 768px) {
+      #sidebar { display: none; }
+      #sidebar.open { display: flex; position: fixed; inset: 0; z-index: 40; width: 260px; }
+    }
+  </style>
+</head>
+
+<body class="flex flex-col h-screen overflow-hidden">
+
+  <!-- ═══════════════════════════════════════════════
+       SCREEN: SETUP / LOGIN
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-auth" class="overlay flex-col gap-0" style="display:none;">
+    <div class="modal" style="max-width:380px;">
+
+      <!-- Logo -->
+      <div class="flex items-center gap-3 mb-6">
+        <div class="w-9 h-9 rounded-lg bg-emerald-600 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="shield-check" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <div class="text-slate-50 font-semibold leading-tight">SmartVault</div>
+          <div class="text-slate-400 text-xs">Brankas Dokumen Digital</div>
+        </div>
+      </div>
+
+      <!-- Setup mode -->
+      <div id="auth-setup" style="display:none;">
+        <div class="text-slate-50 font-semibold mb-1">Bikin PIN buat Vault lu</div>
+        <div class="text-slate-400 text-sm mb-5">Minimal 6 karakter. Jangan lupa ya, gak ada recovery kalau lupa!</div>
+        <div class="mb-3">
+          <label class="text-slate-400 text-xs block mb-1">PIN / Password</label>
+          <input id="setup-pin1" type="password" class="inp" placeholder="Bikin PIN lu..." autocomplete="new-password" />
+        </div>
+        <div class="mb-5">
+          <label class="text-slate-400 text-xs block mb-1">Konfirmasi PIN</label>
+          <input id="setup-pin2" type="password" class="inp" placeholder="Ketik ulang PIN..." autocomplete="new-password" />
+        </div>
+        <div id="setup-error" class="text-rose-500 text-xs mb-3" style="display:none;"></div>
+        <button class="btn btn-primary w-full" onclick="App.setupVault()">
+          <i data-lucide="lock" class="w-4 h-4"></i> Amanin Vault
+        </button>
+      </div>
+
+      <!-- Login mode -->
+      <div id="auth-login" style="display:none;">
+        <div class="text-slate-50 font-semibold mb-1">Masukin PIN lu</div>
+        <div class="text-slate-400 text-sm mb-5">Vault lu udah terkunci. Masuk dulu bro.</div>
+
+        <!-- PIN dots visual -->
+        <div id="pin-dots" class="flex gap-2 justify-center mb-4"></div>
+        <input id="login-pin" type="password" class="inp text-center tracking-widest" placeholder="••••••" autocomplete="current-password" maxlength="64" />
+        <div id="login-error" class="text-rose-500 text-xs mt-2" style="display:none;"></div>
+
+        <button class="btn btn-primary w-full mt-4" onclick="App.loginVault()">
+          <i data-lucide="unlock" class="w-4 h-4"></i> Buka Vault
+        </button>
+
+        <div class="section-sep my-4"></div>
+        <button class="btn btn-ghost w-full" onclick="App.showImportModal()">
+          <i data-lucide="upload" class="w-4 h-4"></i> Restore dari file .vault
+        </button>
+        <div class="text-slate-600 text-xs text-center mt-3">Atau tarik data dari Google Drive setelah login</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       IMPORT .VAULT FILE MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-import" class="overlay" style="display:none;">
+    <div class="modal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-slate-50 font-semibold">Restore dari .vault</div>
+        <button class="btn btn-ghost p-1" onclick="App.closeModal('modal-import')"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="text-slate-400 text-sm mb-4">Pilih file <code class="text-emerald-500">.vault</code> yang udah lo export sebelumnya.</div>
+      <div class="drop-zone mb-3" id="import-drop" onclick="document.getElementById('import-file-input').click()">
+        <i data-lucide="file-up" class="w-6 h-6 text-slate-500 mx-auto mb-2"></i>
+        <div class="text-slate-400 text-sm">Klik atau drop file .vault di sini</div>
+      </div>
+      <input type="file" id="import-file-input" accept=".vault,.json" style="display:none;" onchange="App.handleImportFile(event)" />
+      <div class="mb-3">
+        <label class="text-slate-400 text-xs block mb-1">PIN yang dipake saat export</label>
+        <input id="import-pin" type="password" class="inp" placeholder="Masukin PIN lama lu..." />
+      </div>
+      <div id="import-error" class="text-rose-500 text-xs mb-3" style="display:none;"></div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost flex-1" onclick="App.closeModal('modal-import')">Batal</button>
+        <button class="btn btn-primary flex-1" onclick="App.importVaultFile()">
+          <i data-lucide="download" class="w-4 h-4"></i> Restore Sekarang
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       DOCUMENT EDIT / VIEW MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-doc" class="overlay" style="display:none;">
+    <div class="modal modal-xl">
+      <div class="flex items-center justify-between mb-5">
+        <div>
+          <div id="modal-doc-title" class="text-slate-50 font-semibold text-base"></div>
+          <div id="modal-doc-subtitle" class="text-slate-400 text-xs mt-0.5"></div>
+        </div>
+        <button class="btn btn-ghost p-1" onclick="App.closeModal('modal-doc')"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <!-- Text input mode -->
+      <div id="modal-text-section" style="display:none;">
+        <label class="text-slate-400 text-xs block mb-1.5">Isi Data</label>
+        <textarea id="modal-text-input" class="inp" rows="4" placeholder="Ketik atau paste data lu di sini..."></textarea>
+      </div>
+
+      <!-- File mode -->
+      <div id="modal-file-section" style="display:none;">
+        <!-- Existing files list -->
+        <div id="modal-existing-files" class="mb-3"></div>
+        <!-- Upload new -->
+        <div class="drop-zone" id="modal-drop-zone" onclick="document.getElementById('modal-file-input').click()">
+          <i data-lucide="upload-cloud" class="w-6 h-6 text-slate-500 mx-auto mb-2"></i>
+          <div class="text-slate-400 text-sm">Klik atau drop file di sini</div>
+          <div class="text-slate-600 text-xs mt-1">PDF, PNG, JPG — Max 10MB</div>
+        </div>
+        <input type="file" id="modal-file-input" multiple accept=".pdf,image/*" style="display:none;" onchange="App.handleModalFileSelect(event)" />
+
+        <!-- CV tags -->
+        <div id="modal-cv-tags-section" style="display:none;" class="mt-3">
+          <label class="text-slate-400 text-xs block mb-1.5">Label / Versi CV</label>
+          <div class="flex gap-2">
+            <input id="modal-cv-tag-input" type="text" class="inp flex-1" placeholder="cth: Teknik Informatika, 2024, Fresh Graduate..." />
+            <button class="btn btn-secondary flex-shrink-0" onclick="App.addCvTag()">Tambah</button>
+          </div>
+          <div id="modal-cv-tags-list" class="flex flex-wrap gap-1.5 mt-2"></div>
+        </div>
+      </div>
+
+      <!-- File preview -->
+      <div id="modal-preview" class="mt-3" style="display:none;">
+        <div class="border border-slate-700 rounded-lg overflow-hidden" style="max-height:340px;">
+          <img id="modal-preview-img" style="display:none; max-width:100%; max-height:340px; object-fit:contain;" />
+          <div id="modal-preview-pdf" class="text-slate-400 text-sm p-4 flex items-center gap-2" style="display:none;">
+            <i data-lucide="file-text" class="w-5 h-5"></i>
+            <span id="modal-preview-pdf-name"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex gap-2 mt-5">
+        <button class="btn btn-ghost flex-1" onclick="App.closeModal('modal-doc')">Batal</button>
+        <button class="btn btn-primary flex-1" id="modal-save-btn" onclick="App.saveModalDoc()">
+          <i data-lucide="save" class="w-4 h-4"></i> Simpen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       GOOGLE DRIVE MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-drive" class="overlay" style="display:none;">
+    <div class="modal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-slate-50 font-semibold">Google Drive Sync</div>
+        <button class="btn btn-ghost p-1" onclick="App.closeModal('modal-drive')"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div id="drive-status-section" class="mb-4 p-3 rounded-lg bg-slate-900 border border-slate-700 text-sm">
+        <div id="drive-user-info" class="text-slate-400">Belum connect ke Google...</div>
+        <div id="drive-last-sync" class="text-slate-600 text-xs mt-1" style="display:none;"></div>
+      </div>
+
+      <div id="drive-progress" class="mb-4" style="display:none;">
+        <div class="text-slate-400 text-xs mb-1.5" id="drive-progress-text">Lagi proses...</div>
+        <div class="progress-bar"><div class="progress-fill" id="drive-progress-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <button class="btn btn-secondary w-full" id="btn-drive-auth" onclick="App.driveAuth()">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Login Google
+        </button>
+        <button class="btn btn-primary w-full" id="btn-drive-backup" onclick="App.driveBackup()" disabled>
+          <i data-lucide="cloud-upload" class="w-4 h-4"></i> Sync ke Google Drive
+        </button>
+        <button class="btn btn-ghost w-full" id="btn-drive-restore" onclick="App.driveRestore()" disabled>
+          <i data-lucide="cloud-download" class="w-4 h-4"></i> Tarik dari Google Drive
+        </button>
+        <div class="section-sep"></div>
+        <button class="btn btn-ghost w-full" id="btn-drive-logout" onclick="App.driveLogout()" disabled style="display:none;">
+          <i data-lucide="log-out" class="w-4 h-4"></i> Disconnect Google
+        </button>
+      </div>
+
+      <div class="text-slate-600 text-xs mt-4">Data yang di-sync tetap terenkripsi. Google cuma nyimpen file terenkripsi, bukan data aslinya.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       CHANGE PIN MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-change-pin" class="overlay" style="display:none;">
+    <div class="modal">
+      <div class="flex items-center justify-between mb-4">
+        <div class="text-slate-50 font-semibold">Ganti PIN</div>
+        <button class="btn btn-ghost p-1" onclick="App.closeModal('modal-change-pin')"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <div class="mb-3">
+        <label class="text-slate-400 text-xs block mb-1">PIN Lama</label>
+        <input id="cp-old" type="password" class="inp" placeholder="PIN sekarang..." />
+      </div>
+      <div class="mb-3">
+        <label class="text-slate-400 text-xs block mb-1">PIN Baru</label>
+        <input id="cp-new1" type="password" class="inp" placeholder="PIN baru lu..." />
+      </div>
+      <div class="mb-4">
+        <label class="text-slate-400 text-xs block mb-1">Konfirmasi PIN Baru</label>
+        <input id="cp-new2" type="password" class="inp" placeholder="Ketik ulang PIN baru..." />
+      </div>
+      <div id="cp-error" class="text-rose-500 text-xs mb-3" style="display:none;"></div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost flex-1" onclick="App.closeModal('modal-change-pin')">Batal</button>
+        <button class="btn btn-primary flex-1" onclick="App.changePIN()">
+          <i data-lucide="key" class="w-4 h-4"></i> Ganti PIN
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       DELETE CONFIRM MODAL
+  ═══════════════════════════════════════════════ -->
+  <div id="modal-delete" class="overlay" style="display:none;">
+    <div class="modal" style="max-width:360px;">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-9 h-9 rounded-lg bg-rose-600 bg-opacity-20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <i data-lucide="trash-2" class="w-5 h-5 text-rose-500"></i>
+        </div>
+        <div>
+          <div class="text-slate-50 font-semibold" id="modal-delete-title">Hapus ini?</div>
+          <div class="text-slate-400 text-sm mt-1" id="modal-delete-desc">Aksi ini gak bisa di-undo bro.</div>
+        </div>
+      </div>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost flex-1" onclick="App.closeModal('modal-delete')">Batal</button>
+        <button class="btn btn-danger flex-1" id="modal-delete-confirm-btn">Hapus</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════
+       MAIN LAYOUT
+  ═══════════════════════════════════════════════ -->
+  <div id="screen-main" class="flex flex-1 overflow-hidden" style="display:none !important;">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="flex flex-col w-56 flex-shrink-0 border-r border-slate-800 bg-slate-900 overflow-y-auto" style="min-width:224px;">
+      <!-- Brand -->
+      <div class="flex items-center gap-2.5 p-4 border-b border-slate-800">
+        <div class="w-7 h-7 rounded-md bg-emerald-600 flex items-center justify-center flex-shrink-0">
+          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-white"></i>
+        </div>
+        <span class="font-semibold text-slate-50 text-sm">SmartVault</span>
+      </div>
+
+      <!-- Nav -->
+      <nav class="p-2 flex-1">
+        <div class="text-slate-600 text-xs font-medium px-2 mb-1 mt-2">Kategori</div>
+        <div class="nav-item active" data-section="identitas" onclick="App.switchSection('identitas', this)">
+          <i data-lucide="id-card" class="w-4 h-4 flex-shrink-0"></i> Identitas
+        </div>
+        <div class="nav-item" data-section="mobilitas" onclick="App.switchSection('mobilitas', this)">
+          <i data-lucide="car" class="w-4 h-4 flex-shrink-0"></i> Mobilitas
+        </div>
+        <div class="nav-item" data-section="legalitas" onclick="App.switchSection('legalitas', this)">
+          <i data-lucide="briefcase" class="w-4 h-4 flex-shrink-0"></i> Legalitas & Karir
+        </div>
+        <div class="nav-item" data-section="pendidikan" onclick="App.switchSection('pendidikan', this)">
+          <i data-lucide="graduation-cap" class="w-4 h-4 flex-shrink-0"></i> Pendidikan
+        </div>
+        <div class="nav-item" data-section="sertifikasi" onclick="App.switchSection('sertifikasi', this)">
+          <i data-lucide="award" class="w-4 h-4 flex-shrink-0"></i> Sertifikasi
+        </div>
+        <div class="nav-item" data-section="pasfoto" onclick="App.switchSection('pasfoto', this)">
+          <i data-lucide="image" class="w-4 h-4 flex-shrink-0"></i> Pasfoto
+        </div>
+
+        <div class="section-sep my-3"></div>
+        <div class="text-slate-600 text-xs font-medium px-2 mb-1">Tools</div>
+        <div class="nav-item" onclick="App.exportVault()">
+          <i data-lucide="archive" class="w-4 h-4 flex-shrink-0"></i> Export .vault
+        </div>
+        <div class="nav-item" onclick="App.showImportModal()">
+          <i data-lucide="archive-restore" class="w-4 h-4 flex-shrink-0"></i> Import .vault
+        </div>
+        <div class="nav-item" onclick="App.openModal('modal-drive')">
+          <i data-lucide="cloud" class="w-4 h-4 flex-shrink-0"></i> Google Drive
+        </div>
+      </nav>
+
+      <!-- Bottom actions -->
+      <div class="p-2 border-t border-slate-800">
+        <div class="nav-item" onclick="App.openModal('modal-change-pin')">
+          <i data-lucide="key-round" class="w-4 h-4 flex-shrink-0"></i> Ganti PIN
+        </div>
+        <div class="nav-item" onclick="App.lockVault()">
+          <i data-lucide="lock" class="w-4 h-4 flex-shrink-0"></i> Gembok Vault
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto">
+
+      <!-- Top bar -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800 sticky top-0 bg-slate-900 z-10">
+        <div>
+          <h1 id="section-title" class="text-slate-50 font-semibold text-base">Identitas & Alamat</h1>
+          <p id="section-subtitle" class="text-slate-400 text-xs mt-0.5">Data identitas diri lu</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <!-- Mobile menu toggle -->
+          <button class="btn btn-ghost p-2 md:hidden" onclick="document.getElementById('sidebar').classList.toggle('open')">
+            <i data-lucide="menu" class="w-4 h-4"></i>
+          </button>
+          <div id="sync-indicator" class="text-slate-600 text-xs flex items-center gap-1.5" style="display:none !important;">
+            <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+            <span>Tersimpan</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section content containers -->
+      <div class="p-6">
+
+        <!-- IDENTITAS -->
+        <div id="section-identitas" class="section-content">
+          <div id="grid-identitas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- MOBILITAS -->
+        <div id="section-mobilitas" class="section-content" style="display:none;">
+          <div id="grid-mobilitas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- LEGALITAS -->
+        <div id="section-legalitas" class="section-content" style="display:none;">
+          <!-- CV subsection with multi-upload -->
+          <div class="mb-2 flex items-center justify-between">
+            <div class="text-slate-400 text-xs font-medium">Curriculum Vitae</div>
+            <span class="text-slate-600 text-xs">Bisa upload banyak versi</span>
+          </div>
+          <div id="cv-container" class="mb-6"></div>
+          <div class="text-slate-400 text-xs font-medium mb-2">Dokumen Legalitas</div>
+          <div id="grid-legalitas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- PENDIDIKAN -->
+        <div id="section-pendidikan" class="section-content" style="display:none;">
+          <div id="grid-pendidikan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- SERTIFIKASI -->
+        <div id="section-sertifikasi" class="section-content" style="display:none;">
+          <div id="grid-sertifikasi" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+        <!-- PASFOTO -->
+        <div id="section-pasfoto" class="section-content" style="display:none;">
+          <div id="grid-pasfoto" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- app.js -->
+  <script src="app.js"></script>
+</body>
+</html>
