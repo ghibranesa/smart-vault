@@ -10,29 +10,21 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
 
-  <!-- Lucide Icons -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.383.0/umd/lucide.min.js"></script>
+  <!-- Lucide Icons (jsDelivr — lebih jarang diblokir Tracking Prevention) -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.383.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
 
   <!-- localForage -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/localforage/1.10.0/localforage.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js" crossorigin="anonymous"></script>
 
   <!-- CryptoJS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/crypto-js@4.2.0/crypto-js.min.js" crossorigin="anonymous"></script>
 
-  <!-- Google Identity Services (async ok, kita cek saat dipakai) -->
+  <!-- Google Identity Services (async ok, dicek saat dipakai) -->
   <script src="https://accounts.google.com/gsi/client" async></script>
 
-  <!-- Tailwind LAST agar config bisa diset sebelumnya -->
-  <style>
-    /* Tailwind config via CSS custom property workaround - set config before load */
-  </style>
-  <script>
-    // Set config BEFORE tailwind loads
-    window.tailwind = window.tailwind || {};
-  </script>
+  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
-    // Now configure after load
     if (window.tailwind && window.tailwind.config) {
       tailwind.config = {
         theme: {
@@ -54,11 +46,6 @@
       font-family: 'DM Sans', sans-serif;
       height: 100%;
     }
-
-    /* Hide/show utilities - pakai class, bukan !important */
-    .hidden  { display: none; }
-    .flex    { display: flex; }
-    .block   { display: block; }
 
     /* Scrollbar */
     ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -316,23 +303,23 @@
       <!-- Nav -->
       <nav style="padding:8px;flex:1;">
         <div style="font-size:0.7rem;color:#475569;font-weight:600;padding:8px 8px 4px;text-transform:uppercase;letter-spacing:0.05em;">Kategori</div>
-        <div class="nav-item active" data-sec="identitas"   onclick="App.switchSection('identitas',this)">
-          <i data-lucide="id-card"       style="width:15px;height:15px;flex-shrink:0;"></i> Identitas
+        <div class="nav-item active" data-sec="identitas" onclick="App.switchSection('identitas',this)">
+          <i data-lucide="id-card"         style="width:15px;height:15px;flex-shrink:0;"></i> Identitas
         </div>
-        <div class="nav-item" data-sec="mobilitas"   onclick="App.switchSection('mobilitas',this)">
-          <i data-lucide="car"           style="width:15px;height:15px;flex-shrink:0;"></i> Mobilitas
+        <div class="nav-item" data-sec="mobilitas" onclick="App.switchSection('mobilitas',this)">
+          <i data-lucide="car"             style="width:15px;height:15px;flex-shrink:0;"></i> Mobilitas
         </div>
-        <div class="nav-item" data-sec="legalitas"   onclick="App.switchSection('legalitas',this)">
-          <i data-lucide="briefcase"     style="width:15px;height:15px;flex-shrink:0;"></i> Legalitas & Karir
+        <div class="nav-item" data-sec="legalitas" onclick="App.switchSection('legalitas',this)">
+          <i data-lucide="briefcase"       style="width:15px;height:15px;flex-shrink:0;"></i> Legalitas & Karir
         </div>
-        <div class="nav-item" data-sec="pendidikan"  onclick="App.switchSection('pendidikan',this)">
+        <div class="nav-item" data-sec="pendidikan" onclick="App.switchSection('pendidikan',this)">
           <i data-lucide="graduation-cap" style="width:15px;height:15px;flex-shrink:0;"></i> Pendidikan
         </div>
         <div class="nav-item" data-sec="sertifikasi" onclick="App.switchSection('sertifikasi',this)">
-          <i data-lucide="award"         style="width:15px;height:15px;flex-shrink:0;"></i> Sertifikasi
+          <i data-lucide="award"           style="width:15px;height:15px;flex-shrink:0;"></i> Sertifikasi
         </div>
-        <div class="nav-item" data-sec="pasfoto"     onclick="App.switchSection('pasfoto',this)">
-          <i data-lucide="image"         style="width:15px;height:15px;flex-shrink:0;"></i> Pasfoto
+        <div class="nav-item" data-sec="pasfoto" onclick="App.switchSection('pasfoto',this)">
+          <i data-lucide="image"           style="width:15px;height:15px;flex-shrink:0;"></i> Pasfoto
         </div>
 
         <div class="sep" style="margin:10px 0;"></div>
@@ -369,7 +356,8 @@
           <div id="sec-subtitle" style="font-size:0.75rem;color:#64748b;margin-top:1px;"></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
-          <div id="saved-badge" style="display:none;font-size:0.72rem;color:#10b981;display:flex;align-items:center;gap:5px;">
+          <!-- FIX: hapus display:flex yang duplikat, biarkan flashSaved() yang handle -->
+          <div id="saved-badge" style="display:none;font-size:0.72rem;color:#10b981;align-items:center;gap:5px;">
             <div style="width:6px;height:6px;border-radius:50%;background:#10b981;"></div> Tersimpan
           </div>
         </div>
@@ -460,7 +448,7 @@
     <div id="mdoc-preview" style="margin-top:12px;display:none;">
       <div style="border:1px solid #334155;border-radius:8px;overflow:hidden;max-height:300px;display:flex;align-items:center;justify-content:center;background:#0f172a;">
         <img id="mdoc-prev-img" style="display:none;max-width:100%;max-height:300px;object-fit:contain;" />
-        <div id="mdoc-prev-pdf" style="display:none;padding:16px;font-size:0.82rem;color:#94a3b8;display:flex;align-items:center;gap:8px;">
+        <div id="mdoc-prev-pdf" style="display:none;padding:16px;font-size:0.82rem;color:#94a3b8;align-items:center;gap:8px;">
           <i data-lucide="file-text" style="width:16px;height:16px;"></i>
           <span id="mdoc-prev-pdf-name"></span>
         </div>

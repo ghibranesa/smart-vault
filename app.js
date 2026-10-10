@@ -1,16 +1,16 @@
 /**
- * SmartVault — app.js  (v2, fixed init)
+ * SmartVault — app.js  (v2, fixed)
  * ─────────────────────────────────────
  * SETUP WAJIB:
- *  Ganti GOOGLE_CLIENT_ID di bawah dengan Client ID dari Google Cloud Console.
- *  Authorized JavaScript Origins: tambahkan domain GitHub Pages lo.
+ *  GOOGLE_CLIENT_ID sudah diisi. Pastikan domain lo sudah masuk di
+ *  "Authorized JavaScript Origins" di Google Cloud Console.
  */
 
 /* ═══════════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════════ */
 const CFG = {
-  GOOGLE_CLIENT_ID : 'G280494613299-vcrnbqvj8ni2pub7gq5q2auodcleb2sf.apps.googleusercontent.com',
+  GOOGLE_CLIENT_ID : '280494613299-vcrnbqvj8ni2pub7gq5q2auodcleb2sf.apps.googleusercontent.com',
   GOOGLE_SCOPE     : 'https://www.googleapis.com/auth/drive.appdata',
   DB_KEY           : 'sv_vault',
   META_KEY         : 'sv_meta',
@@ -185,22 +185,18 @@ function hideModal(id) {
    INIT
 ═══════════════════════════════════════════════ */
 async function init() {
-  // Semua lib sudah dijamin ready oleh waitForLibs() sebelum init() dipanggil
   lucide.createIcons();
 
-  // Show main layout (sidebar etc) but hidden under auth overlay
   document.getElementById('main-layout').style.display = 'flex';
 
   const meta = await DB.getMeta();
 
   if (!meta.pinHash) {
-    // First time — setup
     document.getElementById('screen-auth').style.display  = 'flex';
     document.getElementById('auth-setup').style.display   = 'block';
     document.getElementById('auth-login').style.display   = 'none';
     setupPinListeners('setup');
   } else {
-    // Returning — login
     document.getElementById('screen-auth').style.display  = 'flex';
     document.getElementById('auth-setup').style.display   = 'none';
     document.getElementById('auth-login').style.display   = 'block';
@@ -208,7 +204,6 @@ async function init() {
     setupPinListeners('login');
   }
 
-  // Modal drop zones
   initDropZone('mdoc-dropzone', async (files) => {
     for (const f of files) await App._addPendingFile(f);
   });
@@ -216,7 +211,6 @@ async function init() {
     if (files[0]) App._setImportFile(files[0]);
   });
 
-  // Ctrl+Enter saves doc modal
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       ['modal-doc','modal-import','modal-drive','modal-change-pin','modal-delete'].forEach(hideModal);
@@ -226,7 +220,6 @@ async function init() {
     }
   });
 
-  // CV tag enter key
   const tagInp = document.getElementById('mdoc-tag-inp');
   if (tagInp) tagInp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); App.addTag(); } });
 }
@@ -239,7 +232,6 @@ function setupPinListeners(mode) {
       inp.onkeydown = e => { if (e.key === 'Enter') App.loginVault(); };
     }
   } else {
-    const p1 = document.getElementById('setup-pin1');
     const p2 = document.getElementById('setup-pin2');
     if (p2) p2.addEventListener('keydown', e => { if (e.key === 'Enter') App.setupVault(); });
   }
@@ -320,7 +312,6 @@ const App = {
   _enterApp() {
     document.getElementById('screen-auth').style.display = 'none';
     S.loggedIn = true;
-    // Render default section
     App.switchSection('identitas', document.querySelector('.nav-item[data-sec="identitas"]'));
     setTimeout(() => lucide.createIcons(), 80);
   },
@@ -359,7 +350,6 @@ const App = {
 
   _renderLegalitas() {
     const el    = document.getElementById('sec-legalitas');
-    const cvDef = SCHEMA.legalitas.docs.find(d => d.id === 'cv');
     const rest  = SCHEMA.legalitas.docs.filter(d => d.id !== 'cv');
 
     el.innerHTML = `
@@ -437,20 +427,17 @@ const App = {
       ? `<span class="badge-on"  style="font-size:0.7rem;padding:2px 8px;border-radius:4px;">Terisi</span>`
       : `<span class="badge-off" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;">Kosong</span>`;
 
-    // Thumbnail for images
     let thumb = '';
     if (hasFile && data.files[0]?.mime?.startsWith('image/')) {
       thumb = `<div style="border-radius:6px;overflow:hidden;height:70px;margin-bottom:4px;border:1px solid #334155;">
         <img src="${data.files[0].b64}" style="width:100%;height:100%;object-fit:cover;" /></div>`;
     }
 
-    // Text preview
     let txtPrev = '';
     if (hasTxt) {
       txtPrev = `<div style="font-family:monospace;font-size:0.82rem;color:#10b981;background:#0f172a;border-radius:6px;padding:7px 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(data.value)}">${esc(data.value)}</div>`;
     }
 
-    // Action buttons
     let actions = '';
     if (hasTxt) {
       actions = `<button class="btn btn-ghost" onclick="App.quickCopy('${doc.id}')">
@@ -589,16 +576,15 @@ const App = {
     const b64 = await toBase64(file);
     S.pendingFiles.push({ name: file.name, b64, mime: file.type, tags: [] });
 
-    // Show preview for first file
     if (S.pendingFiles.length === 1) {
       qs('mdoc-preview').style.display = 'block';
       if (file.type.startsWith('image/')) {
-        qs('mdoc-prev-img').src          = b64;
+        qs('mdoc-prev-img').src           = b64;
         qs('mdoc-prev-img').style.display = 'block';
         qs('mdoc-prev-pdf').style.display = 'none';
       } else {
-        qs('mdoc-prev-img').style.display        = 'none';
-        qs('mdoc-prev-pdf').style.display        = 'flex';
+        qs('mdoc-prev-img').style.display    = 'none';
+        qs('mdoc-prev-pdf').style.display    = 'flex';
         qs('mdoc-prev-pdf-name').textContent = file.name;
       }
       setTimeout(() => lucide.createIcons(), 20);
@@ -803,9 +789,6 @@ const App = {
 
   /* ── GOOGLE DRIVE ── */
   driveAuth() {
-    if (CFG.GOOGLE_CLIENT_ID.includes('GANTI')) {
-      toast('Set dulu Client ID Google lu di app.js bos!', 'err', 5000); return;
-    }
     if (typeof google === 'undefined' || !google?.accounts?.oauth2) {
       toast('Google SDK belum siap. Coba refresh dulu bos.', 'err'); return;
     }
@@ -833,11 +816,11 @@ const App = {
   driveLogout() {
     if (S.driveToken && typeof google !== 'undefined') google.accounts.oauth2.revoke(S.driveToken, ()=>{});
     S.driveToken = null; S.driveFileId = null;
-    qs('drive-user').textContent   = 'Belum connect ke Google...';
-    qs('btn-gauth').style.display  = 'flex';
+    qs('drive-user').textContent    = 'Belum connect ke Google...';
+    qs('btn-gauth').style.display   = 'flex';
     qs('btn-glogout').style.display = 'none';
-    qs('btn-gbackup').disabled     = true;
-    qs('btn-grestore').disabled    = true;
+    qs('btn-gbackup').disabled      = true;
+    qs('btn-grestore').disabled     = true;
     toast('Disconnect dari Google.', 'info');
   },
 
@@ -877,7 +860,7 @@ const App = {
       form.append('metadata', new Blob([JSON.stringify(meta2)], { type: 'application/json' }));
       form.append('file',     new Blob([payload],                { type: 'application/json' }));
 
-      const url = S.driveFileId
+      const url    = S.driveFileId
         ? `https://www.googleapis.com/upload/drive/v3/files/${S.driveFileId}?uploadType=multipart`
         : 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
       const method = S.driveFileId ? 'PATCH' : 'POST';
@@ -887,7 +870,7 @@ const App = {
       fill.style.width = '100%';
       txt.textContent  = 'Selesai!';
       const t = new Date().toLocaleString('id-ID');
-      qs('drive-sync-time').textContent    = `Terakhir sync: ${t}`;
+      qs('drive-sync-time').textContent   = `Terakhir sync: ${t}`;
       qs('drive-sync-time').style.display = 'block';
       toast('Vault berhasil di-backup ke Google Drive!', 'ok');
     } catch (e) {
@@ -989,22 +972,25 @@ function dateStr() {
 ═══════════════════════════════════════════════ */
 function waitForLibs(cb, attempt) {
   attempt = attempt || 0;
-  var ready = (typeof lucide !== 'undefined') &&
-              (typeof localforage !== 'undefined') &&
-              (typeof CryptoJS !== 'undefined');
-  if (ready) {
+
+  var missing = [];
+  if (typeof lucide      === 'undefined') missing.push('Lucide');
+  if (typeof localforage === 'undefined') missing.push('localForage');
+  if (typeof CryptoJS    === 'undefined') missing.push('CryptoJS');
+
+  if (missing.length === 0) {
     cb();
   } else if (attempt > 80) {
-    // Benar-benar gagal setelah ~8 detik
     document.body.innerHTML =
       '<div style="display:flex;align-items:center;justify-content:center;height:100vh;' +
       'flex-direction:column;gap:12px;font-family:sans-serif;color:#94a3b8;background:#0f172a;">' +
       '<svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">' +
       '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>' +
       '<line x1="12" y1="16" x2="12.01" y2="16"/></svg>' +
-      '<div style="font-size:0.88rem;text-align:center;max-width:300px;">' +
-      'Gagal load library (Lucide / CryptoJS / localForage).<br>Coba refresh. ' +
-      'Kalau tetap gagal, cek koneksi internet lu.</div>' +
+      '<div style="font-size:0.88rem;text-align:center;max-width:320px;">' +
+      'Gagal load: <strong style="color:#f87171;">' + missing.join(', ') + '</strong><br><br>' +
+      'Kemungkinan penyebab:<br>· Browser memblokir CDN (matiin Tracking Prevention)<br>' +
+      '· Koneksi internet bermasalah<br>· Coba buka di Chrome / Firefox</div>' +
       '<button onclick="location.reload()" style="margin-top:8px;padding:8px 20px;' +
       'background:#059669;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:0.85rem;">' +
       'Refresh Sekarang</button></div>';
