@@ -53,7 +53,7 @@ const SCHEMA = {
     sub     : 'Ijazah, transkrip, dan surat pendidikan',
     docs: [
       { id:'ijazah_d3',    label:'Ijazah Diploma III (D3)',                    type:'file', icon:'graduation-cap', hint:'Ijazah D3' },
-      { id:'skl_d3',       label:'Surat Keterangan Lulus Diploma III (SKL D3)',type:'file', icon:'file-check',     hint:'SKL D3 dari kampus' },
+      { id:'skl_d3',       label:'Surat Keterangan Lulus Diploma III (SKL D3)',type:'file', icon:'file-check',     hint:'SKL D3' },
       { id:'skpi_d3',      label:'Surat Keterangan Pendamping Ijazah Diploma III (SKPI D3)', type:'file', icon:'file-badge', hint:'SKPI D3' },
       { id:'transkrip_d3', label:'Transkrip Nilai Diploma III',                type:'file', icon:'table-2',        hint:'Transkrip nilai D3' },
       { id:'ijazah_smk',   label:'Ijazah Sekolah Menengah Kejuruan (SMK)',     type:'file', icon:'graduation-cap', hint:'Ijazah SMK' },
