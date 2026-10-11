@@ -803,7 +803,7 @@ const App = {
     try{
       if(!S.driveFileId){
         fill.style.width='40%'; txt.textContent='Mengecek backup lama...';
-        const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
+        const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
         S.driveFileId=ls.files?.[0]?.id||null;
       }
       fill.style.width='70%'; txt.textContent='Mengunggah...';
@@ -826,7 +826,7 @@ const App = {
     const p=$('drive-prog'),fill=$('drive-prog-fill'),txt=$('drive-prog-txt');
     p.style.display='block'; fill.style.width='30%'; txt.textContent='Mencari backup...';
     try{
-      const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
+      const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
       const fid=ls.files?.[0]?.id;
       if(!fid){ toast('Belum ada backup di Google Drive.','info'); return; }
       fill.style.width='70%'; txt.textContent='Mengunduh data...';
