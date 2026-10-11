@@ -803,21 +803,44 @@ const App = {
     try{
       if(!S.driveFileId){
         fill.style.width='40%'; txt.textContent='Mengecek backup lama...';
-        const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
+        const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)&t=${Date.now()}`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
         S.driveFileId=ls.files?.[0]?.id||null;
       }
-      fill.style.width='70%'; txt.textContent='Mengunggah...';
-      const form=new FormData();
-      form.append('metadata',new Blob([JSON.stringify({name:CFG.DRV_FILE,parents:['appDataFolder']})],{type:'application/json'}));
-      form.append('file',new Blob([payload],{type:'application/json'}));
-      const url=S.driveFileId?`https://www.googleapis.com/upload/drive/v3/files/${S.driveFileId}?uploadType=multipart`:'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-      const resp=await(await fetch(url,{method:S.driveFileId?'PATCH':'POST',headers:{Authorization:`Bearer ${S.driveToken}`},body:form})).json();
+      
+      fill.style.width='60%'; txt.textContent='Inisiasi Upload...';
+      const initUrl = S.driveFileId 
+        ? `https://www.googleapis.com/upload/drive/v3/files/${S.driveFileId}?uploadType=resumable`
+        : `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable`;
+      const fileMeta = S.driveFileId ? {} : { name: CFG.DRV_FILE, parents: ['appDataFolder'] };
+      
+      const initRes = await fetch(initUrl, {
+        method: S.driveFileId ? 'PATCH' : 'POST',
+        headers: {
+          'Authorization': `Bearer ${S.driveToken}`,
+          'Content-Type': 'application/json',
+          'X-Upload-Content-Type': 'application/json'
+        },
+        body: JSON.stringify(fileMeta)
+      });
+      if (!initRes.ok) throw new Error('Inisiasi ditolak API Google');
+      const uploadUrl = initRes.headers.get('Location');
+      
+      fill.style.width='80%'; txt.textContent='Mengirim data...';
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: payload
+      });
+      
+      const resp = await uploadRes.json();
+      if (!uploadRes.ok || resp.error) throw new Error(resp.error?.message || 'Data terlalu besar atau jaringan putus');
+      
       if(!S.driveFileId) S.driveFileId=resp.id;
       fill.style.width='100%'; txt.textContent='Selesai!';
       const t=new Date().toLocaleString('id-ID');
       $('drive-time').textContent=`Terakhir sinkronisasi: ${t}`; $('drive-time').style.display='block';
       toast('Vault berhasil di-backup ke Google Drive!','ok');
-    }catch(e){ toast('Gagal backup: '+e.message,'err'); }
+    }catch(e){ toast('Gagal backup: '+e.message,'err'); console.error(e); }
     finally{ setTimeout(()=>{ p.style.display='none'; fill.style.width='0%'; },2500); }
   },
 
@@ -826,19 +849,24 @@ const App = {
     const p=$('drive-prog'),fill=$('drive-prog-fill'),txt=$('drive-prog-txt');
     p.style.display='block'; fill.style.width='30%'; txt.textContent='Mencari backup...';
     try{
-      const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
+      const ls=await(await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${CFG.DRV_FILE}'&orderBy=modifiedTime desc&fields=files(id)&t=${Date.now()}`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).json();
       const fid=ls.files?.[0]?.id;
       if(!fid){ toast('Belum ada backup di Google Drive.','info'); return; }
+      
       fill.style.width='70%'; txt.textContent='Mengunduh data...';
-      const parsed=JSON.parse(await(await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media`,{headers:{Authorization:`Bearer ${S.driveToken}`}})).text());
+      const getRes = await fetch(`https://www.googleapis.com/drive/v3/files/${fid}?alt=media&t=${Date.now()}`,{headers:{Authorization:`Bearer ${S.driveToken}`}});
+      if (!getRes.ok) throw new Error('Gagal mengunduh dari server');
+      
+      const parsed=JSON.parse(await getRes.text());
       const plain=C.dec(parsed.encrypted,S.pin);
       if(!plain){ toast('PIN berbeda dengan saat backup. Tidak bisa didekripsi.','err',5000); return; }
+      
       await DB.setMeta(parsed.meta); await DB.setRaw(parsed.encrypted);
       S.vault=JSON.parse(plain); S.driveFileId=fid;
       fill.style.width='100%'; txt.textContent='Restore selesai!';
       App.render(S.sec);
       toast('Data berhasil ditarik dari Google Drive!','ok');
-    }catch(e){ toast('Gagal restore: '+e.message,'err'); }
+    }catch(e){ toast('Gagal restore: '+e.message,'err'); console.error(e); }
     finally{ setTimeout(()=>{ p.style.display='none'; fill.style.width='0%'; },2500); }
   },
 };
