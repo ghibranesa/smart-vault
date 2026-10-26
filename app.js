@@ -614,31 +614,37 @@ const App = {
   _rmTag(i){ S.cvTags.splice(i,1); App._renderTags(); },
 
   async saveDoc(){
+    if(S._saving) return;
+    S._saving=true;
+
     const id=S.docId, type=S.docType;
+    const filesToSave=[...S.pfiles];
+    S.pfiles=[];
 
     if(type==='text'){
       const v=$('mdoc-text').value.trim();
-      if(!v){ toast('Isian masih kosong.','err'); return; }
+      if(!v){ toast('Isian masih kosong.','err'); S._saving=false; return; }
       S.vault[id]={value:v,updatedAt:Date.now()};
 
     } else if(type==='both'){
       const v=$('mdoc-text').value.trim();
       const existing=S.vault[id]||{};
-      const newFiles=[...(existing.files||[]),...S.pfiles];
-      if(!v&&!newFiles.length){ toast('Isian masih kosong.','err'); return; }
+      const newFiles=[...(existing.files||[]),...filesToSave];
+      if(!v&&!newFiles.length){ toast('Isian masih kosong.','err'); S._saving=false; return; }
       S.vault[id]={value:v||existing.value||'',files:newFiles,updatedAt:Date.now()};
 
     } else if(type==='file'){
-      if(!S.pfiles.length){ hideModal('m-doc'); return; }
-      S.vault[id]={files:[...(S.vault[id]?.files||[]),...S.pfiles],updatedAt:Date.now()};
+      if(!filesToSave.length){ hideModal('m-doc'); S._saving=false; return; }
+      S.vault[id]={files:[...(S.vault[id]?.files||[]),...filesToSave],updatedAt:Date.now()};
 
     } else if(type==='cv'){
-      if(!S.pfiles.length){ toast('Pilih file CV terlebih dahulu.','err'); return; }
-      const tagged=S.pfiles.map(f=>({...f,tags:[...S.cvTags]}));
+      if(!filesToSave.length){ toast('Pilih file CV terlebih dahulu.','err'); S._saving=false; return; }
+      const tagged=filesToSave.map(f=>({...f,tags:[...S.cvTags]}));
       S.vault[id]={files:[...(S.vault[id]?.files||[]),...tagged],updatedAt:Date.now()};
     }
 
     await DB.save();
+    S._saving=false;
     hideModal('m-doc');
     App.render(S.sec);
     toast('Data berhasil disimpan!','ok');
